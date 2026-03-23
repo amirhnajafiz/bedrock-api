@@ -44,3 +44,10 @@ Bedrock API is an HTTP server service that enables interaction with **Bedrock** 
 ## Related Projects
 
 * [Bedrock Tracer](https://github.com/amirhnajafiz/bedrock-tracer)
+
+## Libraries
+
+* [Echo](https://github.com/labstack/echo)
+* [Docker Go SDK](https://github.com/docker/go-sdk)
+* [ZMQ Go](https://github.com/go-zeromq/zmq4)
+* [Memory Cache](https://github.com/eko/gocache)
