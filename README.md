@@ -4,15 +4,23 @@ Bedrock API is an HTTP server service that enables interaction with **Bedrock** 
 
 ![Abstract Flow](images/abstract_flow_diagram.svg)
 
-## Modesl
+## Components
 
-* Request
-  * Docker Image
-  * Command
-  * Timeout
+* API: The core coordinator of the system. It's the only component that can access key-value storage. All internal components must interact with API via sockets.
+* Docker Daemon: The component that interacts with host's docker daemon to manage system's containers. Responsible for managing target and tracer containers. It get's session data from API using a socket.
+* File Manager Daemon: POSIX type file manager, that interacts with API using a socket.
+* Key Value Storage: A KV storage for API to keep track of the user sessions.
+
+## Models
+
+* Session
+  * UUID
+  * Request
+    * Docker Image
+    * Command
+    * Timeout
   * Status
-    * UID
-    * Pending | Running | Stopped | Finished | Failed
+    * Pending | Running | Terminating | Stopped | Finished | Failed
     * Uptime
     * Trace bytes
 
