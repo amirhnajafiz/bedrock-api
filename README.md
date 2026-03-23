@@ -2,7 +2,7 @@
 
 Bedrock API is an HTTP server service that enables interaction with **Bedrock** tools via HTTP requests. This service is responsible for tracing management and log collection.
 
-![Abstract Flow](images/abstract_flow_diagram.svg)
+![Abstract Flow](.github/images/abstract_flow_diagram.svg)
 
 ## Components
 
