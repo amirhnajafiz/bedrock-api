@@ -7,7 +7,9 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/knadh/koanf/v2 v2.3.4
+	github.com/labstack/echo/v5 v5.0.4
 	github.com/spf13/cobra v1.10.2
+	github.com/zeromq/goczmq v4.1.0+incompatible
 )
 
 require (
@@ -21,4 +23,5 @@ require (
 	github.com/spf13/pflag v1.0.9 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 )
