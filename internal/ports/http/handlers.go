@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 
+	"github.com/amirhnajafiz/bedrock-api/pkg/models"
 	"github.com/amirhnajafiz/bedrock-api/pkg/zclient"
 
 	"github.com/labstack/echo/v5"
@@ -14,7 +15,7 @@ import (
 // ZMQ server is alive and responsive.
 func (h HTTPServer) health(c *echo.Context) error {
 	// call the ZMQ server to check if it's alive
-	rsv, err := zclient.SendEvent(h.SocketAddress, []byte("ping"), 10)
+	rsv, err := zclient.SendEvent(h.SocketAddress, models.Event{Type: "ping"}.ToBytes(), 10)
 	if err != nil {
 		h.Logr.Warn("zmq server connection error", zap.Error(err))
 	} else if string(rsv) != "pong" {

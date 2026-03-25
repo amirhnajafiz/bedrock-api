@@ -1,11 +1,17 @@
 package zmq
 
-import "github.com/zeromq/goczmq"
+import (
+	"github.com/amirhnajafiz/bedrock-api/pkg/models"
+
+	"github.com/zeromq/goczmq"
+	"go.uber.org/zap"
+)
 
 func (z ZMQServer) socketReceiver(router *goczmq.Sock, channel chan [][]byte) {
 	for {
 		request, err := router.RecvMessage()
 		if err != nil {
+			z.Logr.Warn("failed to received message", zap.Error(err))
 			continue
 		}
 
@@ -16,6 +22,7 @@ func (z ZMQServer) socketReceiver(router *goczmq.Sock, channel chan [][]byte) {
 func (z ZMQServer) socketSender(router *goczmq.Sock, channel chan [][]byte) {
 	for event := range channel {
 		if err := router.SendMessage(event); err != nil {
+			z.Logr.Warn("failed to send message", zap.Error(err))
 			continue
 		}
 	}
@@ -23,9 +30,14 @@ func (z ZMQServer) socketSender(router *goczmq.Sock, channel chan [][]byte) {
 
 func (z ZMQServer) socketHandler(in chan [][]byte, out chan [][]byte) {
 	for event := range in {
-		msg := string(event[1])
-		if msg == "ping" {
-			out <- [][]byte{event[0], []byte("pong")}
+		msg, err := models.EventFromBytes(event[1])
+		if err != nil {
+			z.Logr.Warn("failed to parse event", zap.Error(err))
+			continue
+		}
+
+		if msg.Type == "ping" {
+			out <- [][]byte{event[0], models.Event{Type: "pong"}.ToBytes()}
 		}
 	}
 }
