@@ -15,11 +15,9 @@ import (
 // ZMQ server is alive and responsive.
 func (h HTTPServer) health(c *echo.Context) error {
 	// call the ZMQ server to check if it's alive
-	rsv, err := zclient.SendEvent(h.SocketAddress, models.Event{Type: "ping"}.ToBytes(), 10)
+	_, err := zclient.SendEvent(h.SocketAddress, models.NewPacket().ToBytes(), 10)
 	if err != nil {
 		h.Logr.Warn("zmq server connection error", zap.Error(err))
-	} else if string(rsv) != "pong" {
-		h.Logr.Warn("zmq server unexpected response", zap.String("response", string(rsv)))
 	}
 
 	return c.String(http.StatusOK, "OK")

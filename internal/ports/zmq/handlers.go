@@ -30,14 +30,12 @@ func (z ZMQServer) socketSender(router *goczmq.Sock, channel chan [][]byte) {
 
 func (z ZMQServer) socketHandler(in chan [][]byte, out chan [][]byte) {
 	for event := range in {
-		msg, err := models.EventFromBytes(event[1])
+		msg, err := models.PacketFromBytes(event[1])
 		if err != nil {
 			z.Logr.Warn("failed to parse event", zap.Error(err))
 			continue
 		}
 
-		if msg.Type == "ping" {
-			out <- [][]byte{event[0], models.Event{Type: "pong"}.ToBytes()}
-		}
+		out <- [][]byte{event[0], msg.ToBytes()}
 	}
 }

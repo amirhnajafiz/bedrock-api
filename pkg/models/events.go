@@ -1,26 +1,36 @@
 package models
 
-import "encoding/json"
+type EventType string
+
+const (
+	EventCreate EventType = "create"
+	EventPatch  EventType = "patch"
+)
 
 // Event represents a generic event.
-type Event struct {
-	Type    string `json:"type"`
-	Payload []byte `json:"payload,omitempty"`
+type Event interface {
+	Type() EventType
 }
 
-// ToBytes converts the Event struct to a byte slice.
-func (e Event) ToBytes() []byte {
-	bytes, _ := json.Marshal(e)
-	return bytes
+// EventCreatePayload represents the payload for creating a new session.
+type EventCreatePayload struct {
+	SessionId string `json:"sessionId"`
+	Image     string `json:"image"`
+	Command   string `json:"command"`
+	TTL       int    `json:"ttl"`
 }
 
-// EventFromBytes converts a byte slice to an Event struct.
-func EventFromBytes(bytes []byte) (*Event, error) {
-	var event Event
-	err := json.Unmarshal(bytes, &event)
-	if err != nil {
-		return nil, err
-	}
+func (p EventCreatePayload) Type() EventType {
+	return EventCreate
+}
 
-	return &event, nil
+// EventPatchPayload represents the payload for patching an existing session.
+type EventPatchPayload struct {
+	SessionId string `json:"sessionId"`
+	Status    string `json:"status"`
+	TTL       int    `json:"ttl"`
+}
+
+func (p EventPatchPayload) Type() EventType {
+	return EventPatch
 }
