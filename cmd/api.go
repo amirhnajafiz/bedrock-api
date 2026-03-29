@@ -7,6 +7,7 @@ import (
 	"github.com/amirhnajafiz/bedrock-api/internal/logger"
 	"github.com/amirhnajafiz/bedrock-api/internal/ports/http"
 	"github.com/amirhnajafiz/bedrock-api/internal/ports/zmq"
+	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -35,8 +36,9 @@ func StartAPI(cfg *configs.APIConfig) {
 
 	// start the ZMQ server
 	zmqServer := zmq.ZMQServer{
-		Address: fmt.Sprintf("tcp://%s:%d", cfg.SocketHost, cfg.SocketPort),
-		Logr:    logr.Named("zmq"),
+		Address:   fmt.Sprintf("tcp://%s:%d", cfg.SocketHost, cfg.SocketPort),
+		Logr:      logr.Named("zmq"),
+		Scheduler: scheduler.NewRoundRobin(),
 	}
 	go func() {
 		if err := zmqServer.Serve(); err != nil {

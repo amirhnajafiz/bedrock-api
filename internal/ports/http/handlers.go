@@ -13,7 +13,7 @@ import (
 // health checks the server's health by sending a ping packet to ZMQ server.
 func (h HTTPServer) health(c *echo.Context) error {
 	// call the ZMQ server to check if it's alive
-	_, err := zclient.SendEvent(h.SocketAddress, models.NewPacket("").ToBytes(), 10)
+	_, err := zclient.SendEvent(h.SocketAddress, models.NewPacket().ToBytes(), 10)
 	if err != nil {
 		h.Logr.Warn("zmq server connection error", zap.Error(err))
 		return c.String(http.StatusInternalServerError, "zmq not healthy")

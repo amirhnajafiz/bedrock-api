@@ -3,14 +3,15 @@ package zmq
 import (
 	"fmt"
 
+	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
 	"github.com/zeromq/goczmq"
 	"go.uber.org/zap"
 )
 
 type ZMQServer struct {
-	Address string
-
-	Logr *zap.Logger
+	Address   string
+	Logr      *zap.Logger
+	Scheduler scheduler.Scheduler
 }
 
 func (z ZMQServer) Serve() error {

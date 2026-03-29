@@ -4,15 +4,28 @@ import "encoding/json"
 
 // Packet represents a collection of sessions to be sent together over ZMQ.
 type Packet struct {
-	Sender   string    `json:"sender"`
-	Sessions []Session `json:"sessions"`
+	Headers  map[string]string `json:"headers"`
+	Sessions []Session         `json:"sessions"`
 }
 
 // NewPacket creates and returns a new Packet instance.
-func NewPacket(sender string) Packet {
+func NewPacket() Packet {
 	return Packet{
-		Sender: sender,
+		Headers:  make(map[string]string),
+		Sessions: nil,
 	}
+}
+
+// WithSender adds the sender to the packet.
+func (p Packet) WithSender(sender string) Packet {
+	p.Headers["sender"] = sender
+	return p
+}
+
+// WithRegisterDaemon adds the register daemon header.
+func (p Packet) WithRegisterDaemon(name string) Packet {
+	p.Headers["register_daemon"] = name
+	return p
 }
 
 // WithSessions adds sessions to the packet.

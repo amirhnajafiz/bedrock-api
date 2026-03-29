@@ -8,6 +8,6 @@ type KVStorage interface {
 	Get(key string) ([]byte, error)
 	// Delete removes the key-value pair for a given key.
 	Delete(key string) error
-	// List retrieves the values for a given prefix.
-	List(prefix string) ([][]byte, error)
+	// List retrieves the values for a matching wildcard with the key.
+	List(wildcard string) ([][]byte, error)
 }
