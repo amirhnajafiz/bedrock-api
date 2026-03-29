@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/amirhnajafiz/bedrock-api/internal/configs"
 	"github.com/amirhnajafiz/bedrock-api/internal/logger"
@@ -25,7 +26,22 @@ func (a API) Command() *cobra.Command {
 		Short: "API Server",
 		Long:  "API Server is a RESTful API server that provides endpoints for managing and interacting with the system.",
 		Run: func(cmd *cobra.Command, args []string) {
-			StartAPI(a.Cfg)
+			if a.Cfg.RunInFullMode {
+				var wg sync.WaitGroup
+				wg.Add(2)
+
+				go StartAPI(a.Cfg)
+				go StartDockerd(&configs.DockerdConfig{
+					Name:          "hostname",
+					LogLevel:      a.Cfg.LogLevel,
+					APISocketHost: a.Cfg.SocketHost,
+					APISocketPort: a.Cfg.HTTPPort,
+				})
+
+				wg.Wait()
+			} else {
+				StartAPI(a.Cfg)
+			}
 		},
 	}
 }
