@@ -50,6 +50,7 @@ func (h HTTPServer) Serve() error {
 	api.PUT("/sessions/:id", h.updateSession)
 	api.GET("/sessions", h.getSessions)
 	api.GET("/sessions/:id/logs", h.getSessionLogs)
+	api.POST("/sessions/:id/logs", h.storeSessionLogs)
 
 	// log the server start information
 	h.Logr.Info("server started", zap.String("address", h.Address), zap.String("socket_address", h.SocketAddress))

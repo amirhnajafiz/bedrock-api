@@ -31,9 +31,9 @@ type DockerdConfig struct {
 
 // FileMDConfig represents the configuration for the File Management Daemon.
 type FileMDConfig struct {
-	LogLevel string `koanf:"log_level" validate:"oneof=debug info warn error"`
-	HTTPHost string `koanf:"http_host" validate:"ip"`
-	HTTPPort int    `koanf:"http_port" validate:"min=1,max=65535"`
+	LogLevel    string `koanf:"log_level" validate:"oneof=debug info warn error"`
+	APIHTTPHost string `koanf:"api_http_host" validate:"ip"`
+	APIHTTPPort int    `koanf:"api_http_port" validate:"min=1,max=65535"`
 }
 
 // Config represents the configuration for the application.

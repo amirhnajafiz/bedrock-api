@@ -28,7 +28,6 @@ func (p EventCreatePayload) Type() EventType {
 type EventPatchPayload struct {
 	SessionId string `json:"sessionId"`
 	Status    string `json:"status"`
-	TTL       int    `json:"ttl"`
 }
 
 func (p EventPatchPayload) Type() EventType {

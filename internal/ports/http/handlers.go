@@ -51,3 +51,8 @@ func (h HTTPServer) getSessions(c *echo.Context) error {
 func (h HTTPServer) getSessionLogs(c *echo.Context) error {
 	return c.String(http.StatusNotImplemented, "Not implemented")
 }
+
+// storeSessionLogs stores the logs for a specific session based on the session ID provided in the request parameters.
+func (h HTTPServer) storeSessionLogs(c *echo.Context) error {
+	return c.String(http.StatusNotImplemented, "Not implemented")
+}
