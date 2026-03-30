@@ -95,18 +95,10 @@ func TestBackend_List_WithPrefix(t *testing.T) {
 		t.Errorf("List sessions/: got %d entries, want 2", len(result))
 	}
 
-	for k, v := range result {
-		switch k {
-		case "sessions/a":
-			if string(v) != "sa" {
-				t.Errorf("sessions/a: got %q, want %q", v, "sa")
-			}
-		case "sessions/b":
-			if string(v) != "sb" {
-				t.Errorf("sessions/b: got %q, want %q", v, "sb")
-			}
-		default:
-			t.Errorf("List returned unexpected key %q", k)
+	want := map[string]bool{"sa": true, "sb": true}
+	for _, v := range result {
+		if !want[string(v)] {
+			t.Errorf("List returned unexpected value %q", v)
 		}
 	}
 }

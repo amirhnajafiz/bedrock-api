@@ -1,16 +1,15 @@
 package gocache
 
 import (
-	"strings"
-
 	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 )
 
 const (
 	// eventPrefix namespaces all event payload keys.
 	eventPrefix = "events/"
-	// statusSuffix is appended to an event key to store its processing status.
-	statusSuffix = "/status"
+	// eventStatusPrefix namespaces all event status keys, kept separate from
+	// eventPrefix so that List("events/") returns only payloads.
+	eventStatusPrefix = "event_statuses/"
 )
 
 // EventStore wraps any storage.KVStorage backend and exposes event-specific
@@ -32,7 +31,7 @@ func (e *EventStore) SaveEvent(id string, data []byte) error {
 		return err
 	}
 
-	return e.backend.Set(eventPrefix+id+statusSuffix, []byte(storage.EventStatusPending))
+	return e.backend.Set(eventStatusPrefix+id, []byte(storage.EventStatusPending))
 }
 
 // GetEvent retrieves the raw payload bytes for id.
@@ -41,25 +40,9 @@ func (e *EventStore) GetEvent(id string) ([]byte, error) {
 	return e.backend.Get(eventPrefix + id)
 }
 
-// ListEvents returns every stored event keyed by its id (prefix stripped).
-// Status entries are excluded from the result.
-func (e *EventStore) ListEvents() (map[string][]byte, error) {
-	raw, err := e.backend.List(eventPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make(map[string][]byte)
-	for k, v := range raw {
-		// Skip status keys – they share the same prefix but end with statusSuffix.
-		if strings.HasSuffix(k, statusSuffix) {
-			continue
-		}
-
-		result[strings.TrimPrefix(k, eventPrefix)] = v
-	}
-
-	return result, nil
+// ListEvents returns the raw bytes of every stored event payload.
+func (e *EventStore) ListEvents() ([][]byte, error) {
+	return e.backend.List(eventPrefix)
 }
 
 // DeleteEvent removes the event payload and its associated status for id.
@@ -69,7 +52,7 @@ func (e *EventStore) DeleteEvent(id string) error {
 		return err
 	}
 
-	return e.backend.Delete(eventPrefix + id + statusSuffix)
+	return e.backend.Delete(eventStatusPrefix + id)
 }
 
 // MarkProcessed transitions the event identified by id to EventStatusProcessed.
@@ -87,7 +70,7 @@ func (e *EventStore) MarkPending(id string) error {
 // GetStatus returns the current EventStatus for id.
 // Returns storage.ErrNotFound when the event does not exist.
 func (e *EventStore) GetStatus(id string) (storage.EventStatus, error) {
-	raw, err := e.backend.Get(eventPrefix + id + statusSuffix)
+	raw, err := e.backend.Get(eventStatusPrefix + id)
 	if err != nil {
 		return "", err
 	}
@@ -104,5 +87,5 @@ func (e *EventStore) setStatus(id string, status storage.EventStatus) error {
 		return err
 	}
 
-	return e.backend.Set(eventPrefix+id+statusSuffix, []byte(status))
+	return e.backend.Set(eventStatusPrefix+id, []byte(status))
 }

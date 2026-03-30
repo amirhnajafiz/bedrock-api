@@ -184,9 +184,10 @@ func TestEventStore_ListEvents(t *testing.T) {
 		t.Errorf("ListEvents: got %d entries, want 3", len(all))
 	}
 
-	for _, id := range []string{"e1", "e2", "e3"} {
-		if _, ok := all[id]; !ok {
-			t.Errorf("ListEvents: missing id %q", id)
+	want := map[string]bool{"a": true, "b": true, "c": true}
+	for _, v := range all {
+		if !want[string(v)] {
+			t.Errorf("ListEvents: unexpected value %q", v)
 		}
 	}
 }
@@ -202,9 +203,10 @@ func TestEventStore_ListEvents_ExcludesStatusKeys(t *testing.T) {
 		t.Fatalf("ListEvents: %v", err)
 	}
 
-	// Must have exactly one entry (the payload), not two (payload + status).
+	// Must have exactly one entry (the payload); status is stored under a
+	// separate prefix and must not appear here.
 	if len(all) != 1 {
-		t.Errorf("ListEvents: got %d entries, want 1 (status key must be hidden)", len(all))
+		t.Errorf("ListEvents: got %d entries, want 1 (status entry must be hidden)", len(all))
 	}
 }
 
@@ -226,7 +228,7 @@ func TestEventStore_ListEvents_IsolatedFromSessions(t *testing.T) {
 	sessions := gocache.NewSessionStore(backend)
 	events := gocache.NewEventStore(backend)
 
-	_ = sessions.SaveSession("s1", []byte("session"))
+	_ = sessions.SaveSession("s1", "d1", []byte("session"))
 	_ = events.SaveEvent("e1", []byte("event"))
 
 	all, err := events.ListEvents()
@@ -235,6 +237,9 @@ func TestEventStore_ListEvents_IsolatedFromSessions(t *testing.T) {
 	}
 
 	if len(all) != 1 {
-		t.Errorf("ListEvents should not include session keys; got %d entries", len(all))
+		t.Errorf("ListEvents should not include session entries; got %d entries", len(all))
+	}
+	if string(all[0]) != "event" {
+		t.Errorf("ListEvents: got %q, want %q", all[0], "event")
 	}
 }

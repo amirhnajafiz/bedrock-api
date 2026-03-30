@@ -1,12 +1,12 @@
 package gocache
 
 import (
-	"strings"
-
 	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 )
 
 // sessionPrefix namespaces all session keys inside the shared KVStorage backend.
+// Keys follow the pattern: sessions/<dockerdId>/<sessionId>
+// This allows O(1) prefix scans to retrieve all sessions for a given daemon.
 const sessionPrefix = "sessions/"
 
 // SessionStore wraps any storage.KVStorage backend and exposes session-specific
@@ -21,33 +21,35 @@ func NewSessionStore(backend storage.KVStorage) *SessionStore {
 	return &SessionStore{backend: backend}
 }
 
-// SaveSession persists raw session bytes under id.
-func (s *SessionStore) SaveSession(id string, data []byte) error {
-	return s.backend.Set(sessionPrefix+id, data)
+// sessionKey builds the namespaced key for a session.
+func sessionKey(dockerdId, id string) string {
+	return sessionPrefix + dockerdId + "/" + id
 }
 
-// GetSession retrieves the raw bytes for id.
+// SaveSession persists raw session bytes under id, namespaced by dockerdId.
+func (s *SessionStore) SaveSession(id, dockerdId string, data []byte) error {
+	return s.backend.Set(sessionKey(dockerdId, id), data)
+}
+
+// GetSession retrieves the raw bytes for id within the given dockerdId namespace.
 // Returns storage.ErrNotFound when the session does not exist.
-func (s *SessionStore) GetSession(id string) ([]byte, error) {
-	return s.backend.Get(sessionPrefix + id)
+func (s *SessionStore) GetSession(id, dockerdId string) ([]byte, error) {
+	return s.backend.Get(sessionKey(dockerdId, id))
 }
 
-// ListSessions returns every stored session keyed by its id (prefix stripped).
-func (s *SessionStore) ListSessions() (map[string][]byte, error) {
-	raw, err := s.backend.List(sessionPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make(map[string][]byte, len(raw))
-	for k, v := range raw {
-		result[strings.TrimPrefix(k, sessionPrefix)] = v
-	}
-
-	return result, nil
+// ListSessions returns the raw bytes of every stored session across all daemons.
+func (s *SessionStore) ListSessions() ([][]byte, error) {
+	return s.backend.List(sessionPrefix)
 }
 
-// DeleteSession removes the session for id.  It is a no-op when id is unknown.
-func (s *SessionStore) DeleteSession(id string) error {
-	return s.backend.Delete(sessionPrefix + id)
+// ListSessionsByDockerDId returns the raw bytes of every session belonging to
+// the given Docker daemon instance.
+func (s *SessionStore) ListSessionsByDockerDId(dockerdId string) ([][]byte, error) {
+	return s.backend.List(sessionPrefix + dockerdId + "/")
+}
+
+// DeleteSession removes the session for id within the given dockerdId namespace.
+// It is a no-op when the entry is unknown.
+func (s *SessionStore) DeleteSession(id, dockerdId string) error {
+	return s.backend.Delete(sessionKey(dockerdId, id))
 }

@@ -21,8 +21,8 @@ type EventStore interface {
 	SaveEvent(id string, data []byte) error
 	// GetEvent retrieves the raw bytes for id. Returns ErrNotFound when absent.
 	GetEvent(id string) ([]byte, error)
-	// ListEvents returns every stored event keyed by its id.
-	ListEvents() (map[string][]byte, error)
+	// ListEvents returns the raw bytes of every stored event payload.
+	ListEvents() ([][]byte, error)
 	// DeleteEvent removes the event and its associated status for id.
 	// It is a no-op when id is unknown.
 	DeleteEvent(id string) error
