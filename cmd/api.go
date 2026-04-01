@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
@@ -10,6 +11,7 @@ import (
 	"github.com/amirhnajafiz/bedrock-api/internal/ports/zmq"
 	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
 	"github.com/amirhnajafiz/bedrock-api/internal/storage"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -17,6 +19,7 @@ import (
 
 // API represents the API command.
 type API struct {
+	Ctx context.Context
 	Cfg *configs.APIConfig
 }
 
@@ -27,23 +30,19 @@ func (a API) Command() *cobra.Command {
 		Short: "API Server",
 		Long:  "API Server is a RESTful API server that provides endpoints for managing and interacting with the system.",
 		Run: func(cmd *cobra.Command, args []string) {
-			StartAPI(a.Cfg)
+			StartAPI(a.Ctx, a.Cfg)
 		},
 	}
 }
 
-func StartAPI(cfg *configs.APIConfig) {
-	// create a new logger instance
+func StartAPI(ctx context.Context, cfg *configs.APIConfig) {
+	// create public shared modules
 	logr := logger.New(cfg.LogLevel)
-
-	// create a new scheduler instance
 	rr := scheduler.NewRoundRobin()
+	ss := sessions.NewSessionStore(storage.NewGoCache())
 
-	// create KV store instance
-	kv := storage.NewGoCache()
-
-	// create the session store instance
-	ss := sessions.NewSessionStore(kv)
+	// create an errgroup with the provided context
+	erg, ctx := errgroup.WithContext(ctx)
 
 	// build and start the ZMQ server
 	zmqAddress := fmt.Sprintf("tcp://%s:%d", cfg.SocketHost, cfg.SocketPort)
@@ -54,11 +53,9 @@ func StartAPI(cfg *configs.APIConfig) {
 	}.Build(
 		zmqAddress,
 	)
-	go func() {
-		if err := zmqServer.Serve(); err != nil {
-			logr.Panic("zmq failed", zap.Error(err))
-		}
-	}()
+	erg.Go(func() error {
+		return zmqServer.Serve()
+	})
 
 	// build and start the HTTP server
 	httpServer := http.HTTPServer{
@@ -69,7 +66,12 @@ func StartAPI(cfg *configs.APIConfig) {
 		fmt.Sprintf("%s:%d", cfg.HTTPHost, cfg.HTTPPort),
 		zmqAddress,
 	)
-	if err := httpServer.Serve(); err != nil {
-		logr.Error("http failed", zap.Error(err))
+	erg.Go(func() error {
+		return httpServer.Serve()
+	})
+
+	// wait for all servers to finish
+	if err := erg.Wait(); err != nil {
+		logr.Error("api failed", zap.Error(err))
 	}
 }

@@ -21,6 +21,7 @@ import (
 
 // Dockerd represents the Docker Daemon command.
 type Dockerd struct {
+	Ctx context.Context
 	Cfg *configs.DockerdConfig
 }
 
@@ -31,12 +32,12 @@ func (d Dockerd) Command() *cobra.Command {
 		Short: "Docker Daemon",
 		Long:  "Docker Daemon is a containerization platform that allows you to build, ship, and run containers.",
 		Run: func(cmd *cobra.Command, args []string) {
-			StartDockerd(d.Cfg)
+			StartDockerd(d.Ctx, d.Cfg)
 		},
 	}
 }
 
-func StartDockerd(cfg *configs.DockerdConfig) {
+func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) {
 	// create a new logger instance
 	logr := logger.New(cfg.LogLevel)
 

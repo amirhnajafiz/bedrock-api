@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/amirhnajafiz/bedrock-api/cmd"
 	"github.com/amirhnajafiz/bedrock-api/internal/configs"
@@ -23,6 +26,10 @@ func initVars() map[string]string {
 }
 
 func main() {
+	// catch os signals for graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
+	defer stop()
+
 	// create root cmd
 	root := &cobra.Command{}
 
@@ -38,9 +45,9 @@ func main() {
 
 	// add subcommands
 	root.AddCommand(
-		cmd.API{Cfg: cfg.API}.Command(),
-		cmd.Dockerd{Cfg: cfg.Dockerd}.Command(),
-		cmd.FileMD{Cfg: cfg.FileMD}.Command(),
+		cmd.API{Ctx: ctx, Cfg: cfg.API}.Command(),
+		cmd.Dockerd{Ctx: ctx, Cfg: cfg.Dockerd}.Command(),
+		cmd.FileMD{Ctx: ctx, Cfg: cfg.FileMD}.Command(),
 	)
 
 	// execute root cmd
