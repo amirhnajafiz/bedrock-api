@@ -55,10 +55,15 @@ func (z ZMQServer) socketHandler(in chan [][]byte, out chan [][]byte) {
 			continue
 		}
 
-		// TODO: read sessions, update KV storage, respond with sender sessions
+		// check sender header and registration status, if invalid, reply with empty packet
 		dockerd := ""
 		if val, ok := pkt.Headers["sender"]; !ok {
 			z.Logr.Warn("sender header is missing")
+
+			out <- [][]byte{event[0], pkt.ToBytes()}
+			continue
+		} else if !z.Scheduler.Exists(val) {
+			z.Logr.Warn("sender is not a registered daemon", zap.String("name", val))
 
 			out <- [][]byte{event[0], pkt.ToBytes()}
 			continue
@@ -74,11 +79,32 @@ func (z ZMQServer) socketHandler(in chan [][]byte, out chan [][]byte) {
 				continue
 			}
 
+			tmp.Status = session.Status
+
 			// update the session in KV storage
 			if err := z.SessionStore.SaveSession(tmp.Id, dockerd, tmp); err != nil {
 				z.Logr.Warn("failed to update session", zap.Error(err))
 				continue
 			}
 		}
+
+		// create a response packet
+		responsePkt := models.NewPacket()
+		responsePkt.WithSender("api")
+
+		// respond with sender sessions
+		sessions, err := z.SessionStore.ListSessionsByDockerDId(dockerd)
+		if err != nil {
+			z.Logr.Warn("failed to list sessions", zap.Error(err))
+
+			out <- [][]byte{event[0], responsePkt.ToBytes()}
+			continue
+		}
+
+		for _, session := range sessions {
+			responsePkt.Sessions = append(responsePkt.Sessions, *session)
+		}
+
+		out <- [][]byte{event[0], responsePkt.ToBytes()}
 	}
 }

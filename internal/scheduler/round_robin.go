@@ -33,6 +33,13 @@ func (r *RoundRobinScheduler) Append(item string) {
 	r.queue = append(r.queue, item)
 }
 
+func (r *RoundRobinScheduler) Exists(item string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return slices.Contains(r.queue, item)
+}
+
 func (r *RoundRobinScheduler) Pick() (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
