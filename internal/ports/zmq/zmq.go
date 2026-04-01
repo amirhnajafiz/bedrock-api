@@ -1,6 +1,7 @@
 package zmq
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/zeromq/goczmq"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 // ZMQServer represents the ZeroMQ server that handles incoming messages from clients, interacts with the session store and scheduler,
@@ -20,13 +22,17 @@ type ZMQServer struct {
 	SessionStore sessions.SessionStore
 
 	// private modules
-	address string
-	sm      *statemachine.StateMachine
+	handlers int
+	address  string
+	ctx      context.Context
+	sm       *statemachine.StateMachine
 }
 
 // Build initializes the ZMQServer with the specified address and returns the server instance.
-func (z ZMQServer) Build(address string) *ZMQServer {
+func (z ZMQServer) Build(address string, handlers int, ctx context.Context) *ZMQServer {
 	z.address = address
+	z.handlers = handlers
+	z.ctx = ctx
 	z.sm = statemachine.NewStateMachine()
 
 	return &z
@@ -42,15 +48,20 @@ func (z ZMQServer) Serve() error {
 
 	z.Logr.Info("server started", zap.String("address", z.address))
 
+	// create an errgroup with the provided context
+	erg, _ := errgroup.WithContext(z.ctx)
+
 	// start the socket receiver, handler, and sender goroutines
 	in := make(chan [][]byte)
 	out := make(chan [][]byte)
 
-	go z.socketReceiver(router, in)
-	go z.socketSender(router, out)
+	erg.Go(func() error { return z.socketReceiver(router, in) })
+	erg.Go(func() error { return z.socketSender(router, out) })
 
 	// main loop to handle incoming messages and send responses
-	z.socketHandler(in, out)
+	for i := 0; i < z.handlers; i++ {
+		erg.Go(func() error { return z.socketHandler(in, out) })
+	}
 
-	return nil
+	return erg.Wait()
 }

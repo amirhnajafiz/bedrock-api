@@ -11,10 +11,10 @@ import (
 	"github.com/amirhnajafiz/bedrock-api/internal/ports/zmq"
 	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
 	"github.com/amirhnajafiz/bedrock-api/internal/storage"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 // API represents the API command.
@@ -52,6 +52,8 @@ func StartAPI(ctx context.Context, cfg *configs.APIConfig) {
 		SessionStore: ss,
 	}.Build(
 		zmqAddress,
+		cfg.SocketHandlers,
+		ctx,
 	)
 	erg.Go(func() error {
 		return zmqServer.Serve()

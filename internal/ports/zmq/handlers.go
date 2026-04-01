@@ -1,6 +1,8 @@
 package zmq
 
 import (
+	"fmt"
+
 	"github.com/amirhnajafiz/bedrock-api/pkg/models"
 
 	"github.com/zeromq/goczmq"
@@ -8,12 +10,12 @@ import (
 )
 
 // socket receiver reads input messages from router and sends them over handler channel.
-func (z ZMQServer) socketReceiver(router *goczmq.Sock, channel chan [][]byte) {
+func (z ZMQServer) socketReceiver(router *goczmq.Sock, channel chan [][]byte) error {
 	for {
 		request, err := router.RecvMessage()
 		if err != nil {
 			z.Logr.Warn("failed to received message", zap.Error(err))
-			continue
+			return fmt.Errorf("receiver router failed: %v", err)
 		}
 
 		channel <- request
@@ -21,17 +23,19 @@ func (z ZMQServer) socketReceiver(router *goczmq.Sock, channel chan [][]byte) {
 }
 
 // socket sender reads input from handler channel and sends them to router.
-func (z ZMQServer) socketSender(router *goczmq.Sock, channel chan [][]byte) {
+func (z ZMQServer) socketSender(router *goczmq.Sock, channel chan [][]byte) error {
 	for event := range channel {
 		if err := router.SendMessage(event); err != nil {
 			z.Logr.Warn("failed to send message", zap.Error(err))
-			continue
+			return fmt.Errorf("sender router failed: %v", err)
 		}
 	}
+
+	return nil
 }
 
 // socket handler is the main loop of ZMQ server.
-func (z ZMQServer) socketHandler(in chan [][]byte, out chan [][]byte) {
+func (z ZMQServer) socketHandler(in chan [][]byte, out chan [][]byte) error {
 	for event := range in {
 		// parse events into packets
 		pkt, err := models.PacketFromBytes(event[1])
@@ -120,4 +124,6 @@ func (z ZMQServer) socketHandler(in chan [][]byte, out chan [][]byte) {
 		// send the response packet back to the sender
 		out <- [][]byte{event[0], responsePkt.ToBytes()}
 	}
+
+	return nil
 }
