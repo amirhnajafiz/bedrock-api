@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/amirhnajafiz/bedrock-api/internal/storage/gocache"
+	"github.com/amirhnajafiz/bedrock-api/pkg/models"
 )
 
 // newTestSessionStore creates a SessionStore backed by an in-memory gocache instance.
@@ -17,29 +18,24 @@ func newTestSessionStore() SessionStore {
 func TestSessionStore_SaveAndGet(t *testing.T) {
 	s := newTestSessionStore()
 
-	sessions := []struct {
-		id        string
-		dockerdId string
-		data      []byte
-	}{
-		{"s1", "d1", []byte(`{"user":"alice"}`)},
-		{"s2", "d1", []byte(`{"user":"bob"}`)},
-		{"s3", "d2", []byte(`{"user":"carol"}`)},
-		{"s3", "d2", []byte(`{"user":"carol_updated"}`)}, // same id and dockerdId as previous, should overwrite
+	sessions := []models.Session{
+		{Id: "s1", DockerDId: "d1", Spec: models.Spec{Image: "a"}},
+		{Id: "s2", DockerDId: "d1", Spec: models.Spec{Image: "b"}},
+		{Id: "s3", DockerDId: "d2", Spec: models.Spec{Image: "c"}},
 	}
 
 	for _, sess := range sessions {
-		if err := s.SaveSession(sess.id, sess.dockerdId, sess.data); err != nil {
+		if err := s.SaveSession(sess.Id, sess.DockerDId, &sess); err != nil {
 			t.Fatalf("SaveSession: %v", err)
 		}
 
-		got, err := s.GetSession(sess.id, sess.dockerdId)
+		got, err := s.GetSession(sess.Id, sess.DockerDId)
 		if err != nil {
 			t.Fatalf("GetSession: %v", err)
 		}
 
-		if string(got) != string(sess.data) {
-			t.Errorf("GetSession: got %q, want %q", got, sess.data)
+		if string(got.Spec.Image) != string(sess.Spec.Image) {
+			t.Errorf("GetSession: got %q, want %q", got, sess.Spec.Image)
 		}
 	}
 }
@@ -48,18 +44,14 @@ func TestSessionStore_SaveAndGet(t *testing.T) {
 func TestSessionStore_Get_NotFound(t *testing.T) {
 	s := newTestSessionStore()
 
-	sessions := []struct {
-		id        string
-		dockerdId string
-		data      []byte
-	}{
-		{"s1", "d1", []byte(`{"user":"alice"}`)},
-		{"s2", "d1", []byte(`{"user":"bob"}`)},
-		{"s3", "d2", []byte(`{"user":"carol"}`)},
+	sessions := []models.Session{
+		{Id: "s1", DockerDId: "d1", Spec: models.Spec{Image: "a"}},
+		{Id: "s2", DockerDId: "d1", Spec: models.Spec{Image: "b"}},
+		{Id: "s3", DockerDId: "d2", Spec: models.Spec{Image: "c"}},
 	}
 
 	for _, sess := range sessions {
-		if err := s.SaveSession(sess.id, sess.dockerdId, sess.data); err != nil {
+		if err := s.SaveSession(sess.Id, sess.DockerDId, &sess); err != nil {
 			t.Fatalf("SaveSession: %v", err)
 		}
 	}
@@ -75,7 +67,7 @@ func TestSessionStore_Get_NotFound(t *testing.T) {
 func TestSessionStore_Get_WrongDockerdId(t *testing.T) {
 	s := newTestSessionStore()
 
-	_ = s.SaveSession("s1", "d1", []byte("v"))
+	_ = s.SaveSession("s1", "d1", &models.Session{Id: "s1", DockerDId: "d1", Spec: models.Spec{Image: "a"}})
 
 	_, err := s.GetSession("s1", "d2")
 	if !errors.Is(err, gocache.ErrNotFound) {
@@ -88,16 +80,16 @@ func TestSessionStore_Get_WrongDockerdId(t *testing.T) {
 func TestSessionStore_Save_Overwrite(t *testing.T) {
 	s := newTestSessionStore()
 
-	_ = s.SaveSession("s1", "d1", []byte("v1"))
-	_ = s.SaveSession("s1", "d1", []byte("v2"))
+	_ = s.SaveSession("s1", "d1", &models.Session{Id: "s1", DockerDId: "d1", Spec: models.Spec{Image: "a"}})
+	_ = s.SaveSession("s1", "d1", &models.Session{Id: "s1", DockerDId: "d1", Spec: models.Spec{Image: "b"}})
 
 	got, err := s.GetSession("s1", "d1")
 	if err != nil {
 		t.Fatalf("GetSession after overwrite: %v", err)
 	}
 
-	if string(got) != "v2" {
-		t.Errorf("GetSession after overwrite: got %q, want %q", got, "v2")
+	if string(got.Spec.Image) != "b" {
+		t.Errorf("GetSession after overwrite: got %q, want %q", got, "b")
 	}
 }
 
@@ -106,7 +98,7 @@ func TestSessionStore_Save_Overwrite(t *testing.T) {
 func TestSessionStore_Delete(t *testing.T) {
 	s := newTestSessionStore()
 
-	_ = s.SaveSession("s1", "d1", []byte("v"))
+	_ = s.SaveSession("s1", "d1", &models.Session{Id: "s1", DockerDId: "d1", Spec: models.Spec{Image: "a"}})
 
 	if err := s.DeleteSession("s1", "d1"); err != nil {
 		t.Fatalf("DeleteSession: %v", err)
@@ -132,9 +124,9 @@ func TestSessionStore_Delete_NoOp(t *testing.T) {
 func TestSessionStore_ListSessions(t *testing.T) {
 	s := newTestSessionStore()
 
-	_ = s.SaveSession("s1", "d1", []byte("a"))
-	_ = s.SaveSession("s2", "d1", []byte("b"))
-	_ = s.SaveSession("s3", "d2", []byte("c"))
+	_ = s.SaveSession("s1", "d1", &models.Session{Id: "s1", DockerDId: "d1", Spec: models.Spec{Image: "a"}})
+	_ = s.SaveSession("s2", "d1", &models.Session{Id: "s2", DockerDId: "d1", Spec: models.Spec{Image: "b"}})
+	_ = s.SaveSession("s3", "d2", &models.Session{Id: "s3", DockerDId: "d2", Spec: models.Spec{Image: "c"}})
 
 	all, err := s.ListSessions()
 	if err != nil {
@@ -147,7 +139,7 @@ func TestSessionStore_ListSessions(t *testing.T) {
 
 	want := map[string]bool{"a": true, "b": true, "c": true}
 	for _, v := range all {
-		if !want[string(v)] {
+		if !want[string(v.Spec.Image)] {
 			t.Errorf("ListSessions: unexpected value %q", v)
 		}
 	}
@@ -172,9 +164,9 @@ func TestSessionStore_ListSessions_Empty(t *testing.T) {
 func TestSessionStore_ListSessionsByDockerDId(t *testing.T) {
 	s := newTestSessionStore()
 
-	_ = s.SaveSession("s1", "d1", []byte("a"))
-	_ = s.SaveSession("s2", "d1", []byte("b"))
-	_ = s.SaveSession("s3", "d2", []byte("c"))
+	_ = s.SaveSession("s1", "d1", &models.Session{Id: "s1", DockerDId: "d1", Spec: models.Spec{Image: "a"}})
+	_ = s.SaveSession("s2", "d1", &models.Session{Id: "s2", DockerDId: "d1", Spec: models.Spec{Image: "b"}})
+	_ = s.SaveSession("s3", "d2", &models.Session{Id: "s3", DockerDId: "d2", Spec: models.Spec{Image: "c"}})
 
 	d1Sessions, err := s.ListSessionsByDockerDId("d1")
 	if err != nil {
@@ -187,7 +179,7 @@ func TestSessionStore_ListSessionsByDockerDId(t *testing.T) {
 
 	want := map[string]bool{"a": true, "b": true}
 	for _, v := range d1Sessions {
-		if !want[string(v)] {
+		if !want[string(v.Spec.Image)] {
 			t.Errorf("ListSessionsByDockerDId d1: unexpected value %q", v)
 		}
 	}
@@ -198,7 +190,7 @@ func TestSessionStore_ListSessionsByDockerDId(t *testing.T) {
 func TestSessionStore_ListSessionsByDockerDId_Empty(t *testing.T) {
 	s := newTestSessionStore()
 
-	_ = s.SaveSession("s1", "d1", []byte("a"))
+	_ = s.SaveSession("s1", "d1", &models.Session{Id: "s1", DockerDId: "d1", Spec: models.Spec{Image: "a"}})
 
 	d2Sessions, err := s.ListSessionsByDockerDId("d2")
 	if err != nil {

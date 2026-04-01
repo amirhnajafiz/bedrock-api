@@ -1,7 +1,10 @@
 package sessions
 
 import (
+	"encoding/json"
+
 	"github.com/amirhnajafiz/bedrock-api/internal/storage"
+	"github.com/amirhnajafiz/bedrock-api/pkg/models"
 )
 
 // sessionPrefix namespaces all session keys inside the shared KVStorage backend.
@@ -24,25 +27,68 @@ func sessionKey(dockerdId, id string) string {
 }
 
 // SaveSession persists raw session bytes under id, namespaced by dockerdId.
-func (s *sessionStore) SaveSession(id, dockerdId string, data []byte) error {
-	return s.backend.Set(sessionKey(dockerdId, id), data)
+func (s *sessionStore) SaveSession(id, dockerdId string, data *models.Session) error {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	return s.backend.Set(sessionKey(dockerdId, id), bytes)
 }
 
 // GetSession retrieves the raw bytes for id within the given dockerdId namespace.
 // Returns storage.ErrNotFound when the session does not exist.
-func (s *sessionStore) GetSession(id, dockerdId string) ([]byte, error) {
-	return s.backend.Get(sessionKey(dockerdId, id))
+func (s *sessionStore) GetSession(id, dockerdId string) (*models.Session, error) {
+	bytes, err := s.backend.Get(sessionKey(dockerdId, id))
+	if err != nil {
+		return nil, err
+	}
+
+	var session *models.Session
+	if err := json.Unmarshal(bytes, &session); err != nil {
+		return nil, err
+	}
+
+	return session, nil
 }
 
 // ListSessions returns the raw bytes of every stored session across all daemons.
-func (s *sessionStore) ListSessions() ([][]byte, error) {
-	return s.backend.List(sessionPrefix)
+func (s *sessionStore) ListSessions() ([]*models.Session, error) {
+	bytes, err := s.backend.List(sessionPrefix)
+	if err != nil {
+		return nil, err
+	}
+
+	var sessions []*models.Session
+	for _, b := range bytes {
+		var session *models.Session
+		if err := json.Unmarshal(b, &session); err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, session)
+	}
+
+	return sessions, nil
 }
 
 // ListSessionsByDockerDId returns the raw bytes of every session belonging to
 // the given Docker daemon instance.
-func (s *sessionStore) ListSessionsByDockerDId(dockerdId string) ([][]byte, error) {
-	return s.backend.List(sessionPrefix + dockerdId + "/")
+func (s *sessionStore) ListSessionsByDockerDId(dockerdId string) ([]*models.Session, error) {
+	bytes, err := s.backend.List(sessionPrefix + dockerdId + "/")
+	if err != nil {
+		return nil, err
+	}
+
+	var sessions []*models.Session
+	for _, b := range bytes {
+		var session *models.Session
+		if err := json.Unmarshal(b, &session); err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, session)
+	}
+
+	return sessions, nil
 }
 
 // DeleteSession removes the session for id within the given dockerdId namespace.

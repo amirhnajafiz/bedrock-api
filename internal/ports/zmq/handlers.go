@@ -56,5 +56,29 @@ func (z ZMQServer) socketHandler(in chan [][]byte, out chan [][]byte) {
 		}
 
 		// TODO: read sessions, update KV storage, respond with sender sessions
+		dockerd := ""
+		if val, ok := pkt.Headers["sender"]; !ok {
+			z.Logr.Warn("sender header is missing")
+
+			out <- [][]byte{event[0], pkt.ToBytes()}
+			continue
+		} else {
+			dockerd = val
+		}
+
+		// read sessions from packet and update KV storage
+		for _, session := range pkt.Sessions {
+			tmp, err := z.SessionStore.GetSession(session.Id, dockerd)
+			if err != nil {
+				z.Logr.Warn("failed to get session", zap.Error(err))
+				continue
+			}
+
+			// update the session in KV storage
+			if err := z.SessionStore.SaveSession(tmp.Id, dockerd, tmp); err != nil {
+				z.Logr.Warn("failed to update session", zap.Error(err))
+				continue
+			}
+		}
 	}
 }

@@ -1,24 +1,27 @@
 package sessions
 
-import "github.com/amirhnajafiz/bedrock-api/internal/storage"
+import (
+	"github.com/amirhnajafiz/bedrock-api/internal/storage"
+	"github.com/amirhnajafiz/bedrock-api/pkg/models"
+)
 
 // SessionStore provides domain-specific access to sessions data.
 type SessionStore interface {
 	// SaveSession persists raw session bytes under the given id, namespaced by
 	// the owning Docker daemon's id. Calling SaveSession with the same id and
 	// dockerdId overwrites the entry.
-	SaveSession(id, dockerdId string, data []byte) error
+	SaveSession(id, dockerdId string, data *models.Session) error
 
 	// GetSession retrieves the raw bytes for id within the given dockerdId namespace.
 	// Returns ErrNotFound when absent.
-	GetSession(id, dockerdId string) ([]byte, error)
+	GetSession(id, dockerdId string) (*models.Session, error)
 
 	// ListSessions returns the raw bytes of every stored session across all daemons.
-	ListSessions() ([][]byte, error)
+	ListSessions() ([]*models.Session, error)
 
 	// ListSessionsByDockerDId returns the raw bytes of every session belonging to
 	// the given Docker daemon instance. Returns an empty slice when none exist.
-	ListSessionsByDockerDId(dockerdId string) ([][]byte, error)
+	ListSessionsByDockerDId(dockerdId string) ([]*models.Session, error)
 
 	// DeleteSession removes the session for id within the given dockerdId namespace.
 	// It is a no-op when the entry is unknown.
