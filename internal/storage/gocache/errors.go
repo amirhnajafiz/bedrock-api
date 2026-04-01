@@ -1,4 +1,4 @@
-package storage
+package gocache
 
 import "errors"
 

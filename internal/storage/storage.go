@@ -1,5 +1,11 @@
 package storage
 
+import (
+	"time"
+
+	"github.com/amirhnajafiz/bedrock-api/internal/storage/gocache"
+)
+
 // KVStorage represents a key-value storage backend.
 // All implementations must be safe for concurrent use.
 type KVStorage interface {
@@ -11,4 +17,9 @@ type KVStorage interface {
 	Delete(key string) error
 	// List retrieves the values for a matching wildcard with the key.
 	List(wildcard string) ([][]byte, error)
+}
+
+// NewGoCache returns a new KVStorage instance backed by an in-memory go-cache store.
+func NewGoCache() KVStorage {
+	return gocache.NewBackend(1 * time.Minute)
 }

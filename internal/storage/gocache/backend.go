@@ -16,8 +16,6 @@ import (
 	lib_store "github.com/eko/gocache/lib/v4/store"
 	gocache_store "github.com/eko/gocache/store/go_cache/v4"
 	goc "github.com/patrickmn/go-cache"
-
-	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 )
 
 // Backend is a thread-safe, in-memory key-value store backed by eko/gocache
@@ -34,9 +32,9 @@ type Backend struct {
 // but the option is there for future use).
 func NewBackend(cleanupInterval time.Duration) *Backend {
 	client := goc.New(goc.NoExpiration, cleanupInterval)
-	store := gocache_store.NewGoCache(client)
+
 	return &Backend{
-		cache:  lib.New[[]byte](store),
+		cache:  lib.New[[]byte](gocache_store.NewGoCache(client)),
 		client: client,
 	}
 }
@@ -52,7 +50,7 @@ func (b *Backend) Get(key string) ([]byte, error) {
 	val, err := b.cache.Get(context.Background(), key)
 	if err != nil {
 		if errors.Is(err, lib_store.NotFound{}) {
-			return nil, storage.ErrNotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}

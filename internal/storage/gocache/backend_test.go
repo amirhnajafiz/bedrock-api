@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 	"github.com/amirhnajafiz/bedrock-api/internal/storage/gocache"
 )
 
@@ -34,8 +33,8 @@ func TestBackend_Get_NotFound(t *testing.T) {
 	b := newTestBackend()
 
 	_, err := b.Get("missing")
-	if !errors.Is(err, storage.ErrNotFound) {
-		t.Errorf("Get missing key: got %v, want storage.ErrNotFound", err)
+	if !errors.Is(err, gocache.ErrNotFound) {
+		t.Errorf("Get missing key: got %v, want gocache.ErrNotFound", err)
 	}
 }
 
@@ -65,8 +64,8 @@ func TestBackend_Delete(t *testing.T) {
 	}
 
 	_, err := b.Get("k")
-	if !errors.Is(err, storage.ErrNotFound) {
-		t.Errorf("Get after Delete: got %v, want storage.ErrNotFound", err)
+	if !errors.Is(err, gocache.ErrNotFound) {
+		t.Errorf("Get after Delete: got %v, want gocache.ErrNotFound", err)
 	}
 }
 

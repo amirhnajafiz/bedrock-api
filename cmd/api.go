@@ -3,11 +3,13 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
 	"github.com/amirhnajafiz/bedrock-api/internal/configs"
 	"github.com/amirhnajafiz/bedrock-api/internal/logger"
 	"github.com/amirhnajafiz/bedrock-api/internal/ports/http"
 	"github.com/amirhnajafiz/bedrock-api/internal/ports/zmq"
 	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
+	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -34,11 +36,18 @@ func StartAPI(cfg *configs.APIConfig) {
 	// create a new logger instance
 	logr := logger.New(cfg.LogLevel)
 
+	// create KV store instance
+	kv := storage.NewGoCache()
+
+	// create the session store instance
+	ss := sessions.NewSessionStore(kv)
+
 	// start the ZMQ server
 	zmqServer := zmq.ZMQServer{
-		Address:   fmt.Sprintf("tcp://%s:%d", cfg.SocketHost, cfg.SocketPort),
-		Logr:      logr.Named("zmq"),
-		Scheduler: scheduler.NewRoundRobin(),
+		Address:      fmt.Sprintf("tcp://%s:%d", cfg.SocketHost, cfg.SocketPort),
+		Logr:         logr.Named("zmq"),
+		Scheduler:    scheduler.NewRoundRobin(),
+		SessionStore: ss,
 	}
 	go func() {
 		if err := zmqServer.Serve(); err != nil {
@@ -51,6 +60,7 @@ func StartAPI(cfg *configs.APIConfig) {
 		Address:       fmt.Sprintf("%s:%d", cfg.HTTPHost, cfg.HTTPPort),
 		SocketAddress: zmqServer.Address,
 		Logr:          logr.Named("http"),
+		SessionStore:  ss,
 	}
 	if err := httpServer.Serve(); err != nil {
 		logr.Error("http failed", zap.Error(err))

@@ -3,8 +3,8 @@ package zmq
 import (
 	"fmt"
 
+	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
 	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
-	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 
 	"github.com/zeromq/goczmq"
 	"go.uber.org/zap"
@@ -13,9 +13,9 @@ import (
 type ZMQServer struct {
 	Address string
 
-	Logr      *zap.Logger
-	Scheduler scheduler.Scheduler
-	Storage   storage.KVStorage
+	Logr         *zap.Logger
+	Scheduler    scheduler.Scheduler
+	SessionStore sessions.SessionStore
 }
 
 func (z ZMQServer) Serve() error {

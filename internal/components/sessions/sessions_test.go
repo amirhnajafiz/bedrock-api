@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 	"github.com/amirhnajafiz/bedrock-api/internal/storage/gocache"
 )
 
@@ -66,8 +65,8 @@ func TestSessionStore_Get_NotFound(t *testing.T) {
 	}
 
 	_, err := s.GetSession("nope", "d1")
-	if !errors.Is(err, storage.ErrNotFound) {
-		t.Errorf("GetSession missing: got %v, want storage.ErrNotFound", err)
+	if !errors.Is(err, gocache.ErrNotFound) {
+		t.Errorf("GetSession missing: got %v, want gocache.ErrNotFound", err)
 	}
 }
 
@@ -79,8 +78,8 @@ func TestSessionStore_Get_WrongDockerdId(t *testing.T) {
 	_ = s.SaveSession("s1", "d1", []byte("v"))
 
 	_, err := s.GetSession("s1", "d2")
-	if !errors.Is(err, storage.ErrNotFound) {
-		t.Errorf("GetSession wrong dockerdId: got %v, want storage.ErrNotFound", err)
+	if !errors.Is(err, gocache.ErrNotFound) {
+		t.Errorf("GetSession wrong dockerdId: got %v, want gocache.ErrNotFound", err)
 	}
 }
 
@@ -114,8 +113,8 @@ func TestSessionStore_Delete(t *testing.T) {
 	}
 
 	_, err := s.GetSession("s1", "d1")
-	if !errors.Is(err, storage.ErrNotFound) {
-		t.Errorf("GetSession after delete: got %v, want storage.ErrNotFound", err)
+	if !errors.Is(err, gocache.ErrNotFound) {
+		t.Errorf("GetSession after delete: got %v, want gocache.ErrNotFound", err)
 	}
 }
 
