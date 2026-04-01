@@ -11,7 +11,7 @@ import (
 	"github.com/amirhnajafiz/bedrock-api/internal/logger"
 	"github.com/amirhnajafiz/bedrock-api/pkg/enums"
 	"github.com/amirhnajafiz/bedrock-api/pkg/models"
-	"github.com/amirhnajafiz/bedrock-api/pkg/zclient"
+	zmqclient "github.com/amirhnajafiz/bedrock-api/pkg/zmq_client"
 
 	"github.com/docker/docker/client"
 	"github.com/google/uuid"
@@ -49,16 +49,16 @@ func StartDockerd(cfg *configs.DockerdConfig) {
 		name = uuid.NewString()
 	}
 
-	// API ZMQ server address
-	address := fmt.Sprintf("tcp://%s:%d", cfg.APISocketHost, cfg.APISocketPort)
+	// build the ZMQ client
+	zclient := zmqclient.NewZMQClient(fmt.Sprintf("tcp://%s:%d", cfg.APISocketHost, cfg.APISocketPort))
 
 	// register this docker daemon with API
 	registered := false
-	_, err := zclient.SendEvent(address, models.NewPacket().WithRegisterDaemon(name).ToBytes(), 20)
+	_, err := zclient.Send(models.NewPacket().WithRegisterDaemon(name).ToBytes())
 	if err != nil {
 		logr.Warn("register daemon failed", zap.Error(err))
 		for range cfg.APIConnectionRetrys {
-			_, e := zclient.SendEvent(address, models.NewPacket().WithRegisterDaemon(name).ToBytes(), 20)
+			_, e := zclient.Send(models.NewPacket().WithRegisterDaemon(name).ToBytes())
 			if e == nil {
 				registered = true
 				break
@@ -113,7 +113,7 @@ func StartDockerd(cfg *configs.DockerdConfig) {
 		packet := models.NewPacket().WithSender(name).WithSessions(sessions...)
 
 		// send packet to ZMQ server
-		resp, err := zclient.SendEvent(address, packet.ToBytes(), 30)
+		resp, err := zclient.Send(packet.ToBytes())
 		if err != nil {
 			logr.Warn("failed to call API", zap.Error(err))
 			continue

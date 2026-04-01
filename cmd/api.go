@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
-	statemachine "github.com/amirhnajafiz/bedrock-api/internal/components/state_machine"
 	"github.com/amirhnajafiz/bedrock-api/internal/configs"
 	"github.com/amirhnajafiz/bedrock-api/internal/logger"
 	"github.com/amirhnajafiz/bedrock-api/internal/ports/http"
@@ -37,6 +36,9 @@ func StartAPI(cfg *configs.APIConfig) {
 	// create a new logger instance
 	logr := logger.New(cfg.LogLevel)
 
+	// create a new scheduler instance
+	rr := scheduler.NewRoundRobin()
+
 	// create KV store instance
 	kv := storage.NewGoCache()
 
@@ -44,26 +46,27 @@ func StartAPI(cfg *configs.APIConfig) {
 	ss := sessions.NewSessionStore(kv)
 
 	// start the ZMQ server
-	zmqServer := zmq.ZMQServer{
-		Address:      fmt.Sprintf("tcp://%s:%d", cfg.SocketHost, cfg.SocketPort),
-		Logr:         logr.Named("zmq"),
-		Scheduler:    scheduler.NewRoundRobin(),
-		SessionStore: ss,
-		SM:           statemachine.NewStateMachine(),
-	}
+	zmqAddress := fmt.Sprintf("tcp://%s:%d", cfg.SocketHost, cfg.SocketPort)
+	zmqServer := zmq.NewZMQServer(
+		zmqAddress,
+		logr.Named("zmq"),
+		rr,
+		ss,
+	)
 	go func() {
 		if err := zmqServer.Serve(); err != nil {
 			logr.Panic("zmq failed", zap.Error(err))
 		}
 	}()
 
-	// start the HTTP server
-	httpServer := http.HTTPServer{
-		Address:       fmt.Sprintf("%s:%d", cfg.HTTPHost, cfg.HTTPPort),
-		SocketAddress: zmqServer.Address,
-		Logr:          logr.Named("http"),
-		SessionStore:  ss,
-	}
+	// build and start the HTTP server
+	httpServer := http.NewHTTPServer(
+		fmt.Sprintf("%s:%d", cfg.HTTPHost, cfg.HTTPPort),
+		zmqAddress,
+		logr.Named("http"),
+		rr,
+		ss,
+	)
 	if err := httpServer.Serve(); err != nil {
 		logr.Error("http failed", zap.Error(err))
 	}

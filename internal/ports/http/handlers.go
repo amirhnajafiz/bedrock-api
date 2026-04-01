@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/amirhnajafiz/bedrock-api/pkg/models"
-	"github.com/amirhnajafiz/bedrock-api/pkg/zclient"
 
 	"github.com/labstack/echo/v5"
 	"go.uber.org/zap"
@@ -13,9 +12,9 @@ import (
 // health checks the server's health by sending an empty packet to ZMQ server.
 func (h HTTPServer) health(c *echo.Context) error {
 	// call the ZMQ server to check if it's alive
-	_, err := zclient.SendEvent(h.SocketAddress, models.NewPacket().ToBytes(), 10)
+	_, err := h.zclient.Send(models.NewPacket().ToBytes())
 	if err != nil {
-		h.Logr.Warn("zmq server connection error", zap.Error(err))
+		h.logr.Warn("zmq server connection error", zap.Error(err))
 		return c.String(http.StatusInternalServerError, "zmq not healthy")
 	}
 

@@ -4,8 +4,11 @@ import "encoding/json"
 
 // Packet represents a collection of sessions to be sent together over ZMQ.
 type Packet struct {
-	Headers  map[string]string `json:"headers"`
-	Sessions []Session         `json:"sessions"`
+	// Headers is a map of string key-value pairs that can be used to include additional information about the packet,
+	// such as the sender or the type of message.
+	Headers map[string]string `json:"headers"`
+	// Sessions is a slice of Session structs that represent the individual sessions included in the packet.
+	Sessions []Session `json:"sessions"`
 }
 
 // NewPacket creates and returns a new Packet instance.
