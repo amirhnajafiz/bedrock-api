@@ -92,7 +92,7 @@ func (z ZMQServer) processEvent(event [][]byte) [][]byte {
 
 	// read sessions from packet and update KV storage
 	for _, session := range pkt.Sessions {
-		record, err := z.SessionStore.GetSession(session.Id, dockerd)
+		record, err := z.sessionStore.GetSession(session.Id, dockerd)
 		if err != nil {
 			z.Logr.Warn(
 				"failed to get session",
@@ -107,7 +107,7 @@ func (z ZMQServer) processEvent(event [][]byte) [][]byte {
 		record.Status = z.stateMachine.Transition(record.Status, session.Status)
 
 		// update the session in KV storage
-		if err := z.SessionStore.SaveSession(record.Id, dockerd, record); err != nil {
+		if err := z.sessionStore.SaveSession(record.Id, dockerd, record); err != nil {
 			z.Logr.Warn(
 				"failed to update session",
 				zap.Error(err),
@@ -119,7 +119,7 @@ func (z ZMQServer) processEvent(event [][]byte) [][]byte {
 	}
 
 	// respond with dockerd sessions
-	sessions, err := z.SessionStore.ListSessionsByDockerDId(dockerd)
+	sessions, err := z.sessionStore.ListSessionsByDockerDId(dockerd)
 	if err != nil {
 		z.Logr.Warn("failed to list sessions", zap.Error(err))
 

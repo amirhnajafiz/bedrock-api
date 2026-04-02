@@ -5,13 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
 	"github.com/amirhnajafiz/bedrock-api/internal/configs"
 	"github.com/amirhnajafiz/bedrock-api/internal/logger"
 	"github.com/amirhnajafiz/bedrock-api/internal/ports/http"
 	"github.com/amirhnajafiz/bedrock-api/internal/ports/zmq"
-	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
-	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 	"github.com/amirhnajafiz/bedrock-api/internal/workers"
 
 	"github.com/spf13/cobra"
@@ -67,10 +64,8 @@ func (a API) Command() *cobra.Command {
 }
 
 func StartAPI(ctx context.Context, cfg *configs.APIConfig) error {
-	// create public shared modules
+	// create a new logger instance
 	logr := logger.New(cfg.LogLevel)
-	rrScheduler := scheduler.NewRoundRobin()
-	sessionStore := sessions.NewSessionStore(storage.NewGoCache())
 
 	// create an errgroup with the provided context
 	erg, ctx := errgroup.WithContext(ctx)
@@ -87,7 +82,6 @@ func StartAPI(ctx context.Context, cfg *configs.APIConfig) error {
 	zmqServer := zmq.ZMQServer{
 		DockerDHealthChannel: dockerdHealthChannel,
 		Logr:                 logr.Named("zmq"),
-		SessionStore:         sessionStore,
 	}.Build(
 		zmqAddress,
 		cfg.SocketHandlers,
@@ -97,9 +91,7 @@ func StartAPI(ctx context.Context, cfg *configs.APIConfig) error {
 
 	// build and start the HTTP server in a separate goroutine
 	httpServer := http.HTTPServer{
-		Logr:         logr.Named("http"),
-		Scheduler:    rrScheduler,
-		SessionStore: sessionStore,
+		Logr: logr.Named("http"),
 	}.Build(
 		fmt.Sprintf("%s:%d", cfg.HTTPHost, cfg.HTTPPort),
 		zmqAddress,

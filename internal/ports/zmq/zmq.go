@@ -6,6 +6,7 @@ import (
 
 	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
 	statemachine "github.com/amirhnajafiz/bedrock-api/internal/state_machine"
+	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 
 	"github.com/zeromq/goczmq"
 	"go.uber.org/zap"
@@ -18,12 +19,12 @@ type ZMQServer struct {
 	// public shared modules
 	DockerDHealthChannel chan string
 	Logr                 *zap.Logger
-	SessionStore         sessions.SessionStore
 
 	// private modules
 	eventHandlers int
 	address       string
 	ctx           context.Context
+	sessionStore  sessions.SessionStore
 	stateMachine  *statemachine.StateMachine
 }
 
@@ -32,6 +33,8 @@ func (z ZMQServer) Build(address string, eventHandlers int, ctx context.Context)
 	z.address = address
 	z.eventHandlers = eventHandlers
 	z.ctx = ctx
+
+	z.sessionStore = sessions.NewSessionStore(storage.NewGoCache())
 	z.stateMachine = statemachine.NewStateMachine()
 
 	return &z
