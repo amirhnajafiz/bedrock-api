@@ -3,10 +3,8 @@ package zmq
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
-	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
 	statemachine "github.com/amirhnajafiz/bedrock-api/internal/state_machine"
 
 	"github.com/zeromq/goczmq"
@@ -18,26 +16,22 @@ import (
 // and sends responses back to clients.
 type ZMQServer struct {
 	// public shared modules
-	Logr         *zap.Logger
-	Scheduler    scheduler.Scheduler
-	SessionStore sessions.SessionStore
+	DockerDHealthChannel chan string
+	Logr                 *zap.Logger
+	SessionStore         sessions.SessionStore
 
 	// private modules
-	eventHandlers       int
-	address             string
-	ctx                 context.Context
-	healthChannel       chan string
-	healthCheckInterval time.Duration
-	stateMachine        *statemachine.StateMachine
+	eventHandlers int
+	address       string
+	ctx           context.Context
+	stateMachine  *statemachine.StateMachine
 }
 
 // Build initializes the ZMQServer with the specified address and returns the server instance.
-func (z ZMQServer) Build(address string, eventHandlers int, healthCheckInterval time.Duration, ctx context.Context) *ZMQServer {
+func (z ZMQServer) Build(address string, eventHandlers int, ctx context.Context) *ZMQServer {
 	z.address = address
 	z.eventHandlers = eventHandlers
 	z.ctx = ctx
-	z.healthChannel = make(chan string)
-	z.healthCheckInterval = healthCheckInterval
 	z.stateMachine = statemachine.NewStateMachine()
 
 	return &z
@@ -67,12 +61,6 @@ func (z ZMQServer) Serve() error {
 	for i := 0; i < z.eventHandlers; i++ {
 		erg.Go(func() error { return z.socketHandler(ctx, in, out) })
 	}
-
-	// start the workers
-	erg.Go(func() error {
-		workerCheckDockerDHealthStatus(ctx, z.healthChannel, z.healthCheckInterval, z.Scheduler)
-		return nil
-	})
 
 	return erg.Wait()
 }

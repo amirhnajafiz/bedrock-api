@@ -88,7 +88,7 @@ func (z ZMQServer) processEvent(event [][]byte) [][]byte {
 	}
 
 	// update health status of the sender daemon
-	z.healthChannel <- dockerd
+	z.DockerDHealthChannel <- dockerd
 
 	// read sessions from packet and update KV storage
 	for _, session := range pkt.Sessions {

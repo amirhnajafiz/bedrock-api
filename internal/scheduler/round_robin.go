@@ -1,12 +1,14 @@
 package scheduler
 
 import (
-	"errors"
 	"slices"
 	"sync"
 )
 
-var ErrEmpty = errors.New("scheduler is empty")
+var (
+	// roundRobinSchedulerInstance is a singleton instance of RoundRobinScheduler.
+	roundRobinSchedulerInstance Scheduler
+)
 
 // RoundRobinScheduler selects an instance using RoundRobin algorithm.
 type RoundRobinScheduler struct {
@@ -14,11 +16,15 @@ type RoundRobinScheduler struct {
 	queue []string
 }
 
-// NewRoundRobin returns an instance of round-robin scheduler.
+// NewRoundRobin returns a singleton instance of RoundRobinScheduler.
 func NewRoundRobin() Scheduler {
-	return &RoundRobinScheduler{
-		queue: make([]string, 0),
+	if roundRobinSchedulerInstance == nil {
+		roundRobinSchedulerInstance = &RoundRobinScheduler{
+			queue: make([]string, 0),
+		}
 	}
+
+	return roundRobinSchedulerInstance
 }
 
 func (r *RoundRobinScheduler) Append(item string) {

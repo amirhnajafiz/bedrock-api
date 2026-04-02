@@ -12,6 +12,7 @@ import (
 	"github.com/amirhnajafiz/bedrock-api/internal/ports/zmq"
 	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
 	"github.com/amirhnajafiz/bedrock-api/internal/storage"
+	"github.com/amirhnajafiz/bedrock-api/internal/workers"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -74,16 +75,22 @@ func StartAPI(ctx context.Context, cfg *configs.APIConfig) error {
 	// create an errgroup with the provided context
 	erg, ctx := errgroup.WithContext(ctx)
 
+	// start the workers
+	dockerdHealthChannel := make(chan string)
+	erg.Go(func() error {
+		workers.WorkerDockerDHealthCheck(ctx, dockerdHealthChannel, cfg.DockerDHealthCheckInterval)
+		return nil
+	})
+
 	// build and start the ZMQ server in a separate goroutine
 	zmqAddress := fmt.Sprintf("tcp://%s:%d", cfg.SocketHost, cfg.SocketPort)
 	zmqServer := zmq.ZMQServer{
-		Logr:         logr.Named("zmq"),
-		Scheduler:    rrScheduler,
-		SessionStore: sessionStore,
+		DockerDHealthChannel: dockerdHealthChannel,
+		Logr:                 logr.Named("zmq"),
+		SessionStore:         sessionStore,
 	}.Build(
 		zmqAddress,
 		cfg.SocketHandlers,
-		cfg.DockerDHealthCheckInterval,
 		ctx,
 	)
 	erg.Go(zmqServer.Serve)

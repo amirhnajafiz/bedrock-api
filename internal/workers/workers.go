@@ -1,4 +1,4 @@
-package zmq
+package workers
 
 import (
 	"context"
@@ -7,10 +7,12 @@ import (
 	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
 )
 
-// workerCheckDockerDHealthStatus continuously checks the health status of Docker daemons by listening to a healthChannel for updates and using
-// a ticker to periodically remove stale entries from the health map.
-// It interacts with the scheduler to append or drop Docker daemons based on their health status.
-func workerCheckDockerDHealthStatus(ctx context.Context, healthChannel chan string, interval time.Duration, scheduler scheduler.Scheduler) {
+// WorkerDockerDHealthCheck continuously checks the health status of Docker daemons by listening to an input channel
+// for updates and using a ticker to periodically remove stale entries from the health map.
+func WorkerDockerDHealthCheck(ctx context.Context, input chan string, interval time.Duration) {
+	// get a reference to the scheduler instance
+	scheduler := scheduler.NewRoundRobin()
+
 	// healthMap keeps track of the last time a health update was received for each Docker daemon
 	healthMap := make(map[string]time.Time)
 
@@ -22,7 +24,7 @@ func workerCheckDockerDHealthStatus(ctx context.Context, healthChannel chan stri
 		select {
 		case <-ctx.Done():
 			return
-		case dockerd := <-healthChannel:
+		case dockerd := <-input:
 			// update the healthMap with the current time for the received Docker daemon
 			healthMap[dockerd] = time.Now()
 			scheduler.Append(dockerd)
