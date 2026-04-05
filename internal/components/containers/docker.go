@@ -122,12 +122,13 @@ func (m *dockerManager) List(ctx context.Context) ([]ContainerInfo, error) {
 
 		// create a container info instance
 		cinfo := ContainerInfo{
-			ID:       c.ID,
-			Name:     name,
-			Image:    c.Image,
-			Status:   c.Status,
-			Exited:   false,
-			ExitCode: 0,
+			ID:        c.ID,
+			Name:      name,
+			Image:     c.Image,
+			Status:    c.Status,
+			Exited:    false,
+			ExitCode:  0,
+			CreatedAt: c.Created,
 		}
 
 		// call ContainerInspect to get the exit code if the container has finished

@@ -50,4 +50,6 @@ type ContainerInfo struct {
 	Exited bool
 	// Exit code if the container has finished.
 	ExitCode int
+	// Creation timestamp of the container.
+	CreatedAt int64
 }

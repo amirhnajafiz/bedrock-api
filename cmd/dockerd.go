@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/amirhnajafiz/bedrock-api/internal/components/containers"
@@ -117,7 +118,88 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 
 		// TODO: make changes to reach to API state
 		for _, session := range respPacket.Sessions {
-			fmt.Println(session.Id)
+			switch session.Status {
+			case enums.SessionStatusStopped:
+			case enums.SessionStatusFailed:
+			case enums.SessionStatusFinished:
+				if err := stopContainersForSession(cm, session); err != nil {
+					logr.Warn("failed to stop container", zap.String("id", session.Id), zap.Error(err))
+				}
+			case enums.SessionStatusPending:
+				if err := startContainersForSession(cm, session); err != nil {
+					logr.Warn("failed to start container", zap.String("id", session.Id), zap.Error(err))
+				}
+			}
 		}
 	}
+}
+
+func startContainersForSession(cm containers.ContainerManager, session models.Session) error {
+	target := fmt.Sprintf("bedrock-target-%s", session.Id)
+	tracer := fmt.Sprintf("bedrock-tracer-%s", session.Id)
+
+	// create tracing output directory for the session
+	outputDir := fmt.Sprintf("/tmp/bedrock-outputs/%s", session.Id)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return err
+	}
+
+	// start the tracer container
+	if _, err := cm.Create(
+		context.Background(),
+		containers.ContainerConfig{
+			Name:  tracer,
+			Image: "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.6-beta",
+			Cmd: []string{
+				"bdtrace",
+				"--container",
+				target,
+				"-o",
+				"/logs",
+			},
+			Flags: map[string]any{
+				"pid":        "host",
+				"privileged": true,
+			},
+			Volumes: map[string]string{
+				"/sys":                               "/sys:rw",
+				"/lib/modules":                       "/lib/modules:ro",
+				"/var/run/docker.sock":               "/var/run/docker.sock",
+				"/tmp/bedrock-outputs/" + session.Id: "/logs",
+			},
+		},
+	); err != nil {
+		return err
+	}
+
+	// start the target container
+	if _, err := cm.Create(
+		context.Background(),
+		containers.ContainerConfig{
+			Name:  target,
+			Image: session.Spec.Image,
+			Cmd:   strings.Split(session.Spec.Command, " "),
+		},
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func stopContainersForSession(cm containers.ContainerManager, session models.Session) error {
+	target := fmt.Sprintf("bedrock-target-%s", session.Id)
+	tracer := fmt.Sprintf("bedrock-tracer-%s", session.Id)
+
+	// stop the target container
+	if err := cm.Stop(context.Background(), target); err != nil {
+		return err
+	}
+
+	// stop the tracer container
+	if err := cm.Stop(context.Background(), tracer); err != nil {
+		return err
+	}
+
+	return nil
 }
