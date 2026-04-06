@@ -76,6 +76,10 @@ func StartAPI(ctx context.Context, cfg *configs.APIConfig) error {
 		workers.WorkerDockerDHealthCheck(ctx, dockerdHealthChannel, cfg.DockerDHealthCheckInterval)
 		return nil
 	})
+	erg.Go(func() error {
+		workers.WorkerCheckExpiredSessions(ctx, logr.Named("session-worker"), 10*time.Second)
+		return nil
+	})
 
 	// build and start the ZMQ server in a separate goroutine
 	zmqAddress := fmt.Sprintf("tcp://%s:%d", cfg.SocketHost, cfg.SocketPort)

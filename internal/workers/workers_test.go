@@ -5,9 +5,49 @@ import (
 	"testing"
 	"time"
 
+	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
+	"github.com/amirhnajafiz/bedrock-api/internal/logger"
 	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
+	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 	"github.com/amirhnajafiz/bedrock-api/internal/workers"
+	"github.com/amirhnajafiz/bedrock-api/pkg/models"
 )
+
+func TestWorkerCheckExpiredSessions(t *testing.T) {
+	// create a context
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// create a new logger instance
+	logr := logger.New("info")
+
+	// create a session store and add some sessions with different TTLs
+	ss := sessions.NewSessionStore(storage.NewGoCache())
+	ss.SaveSession("1", "d1", &models.Session{
+		CreatedAt: time.Now(),
+		Spec: models.Spec{
+			TTL: 2 * time.Second,
+		},
+	})
+
+	// start the WorkerCheckExpiredSessions in a separate goroutine
+	go workers.WorkerCheckExpiredSessions(ctx, logr.Named("session-worker"), 1*time.Second)
+
+	// session must exist now
+	if _, err := ss.GetSession("1", "d1"); err != nil {
+		t.Errorf("Expected session to exist, got error: %v", err)
+	}
+
+	// wait for a short period to allow the worker to run
+	time.Sleep(5 * time.Second)
+
+	// session must not exist after TTL has expired
+	if _, err := ss.GetSession("1", "d1"); err == nil {
+		t.Errorf("Expected session to be expired and removed, but it still exists")
+	}
+
+	// cancel the context to stop the worker
+	cancel()
+}
 
 // TestWorkerDockerDHealthCheck tests the WorkerDockerDHealthCheck function to ensure it correctly updates
 // the scheduler with healthy Docker daemons and removes stale entries after the specified interval.
