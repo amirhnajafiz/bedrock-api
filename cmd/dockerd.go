@@ -63,6 +63,12 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 		return err
 	}
 
+	// create a new tracer
+	tc := bdtracer.BdTracer{
+		BaseDir: cfg.DataDir,
+		Image:   cfg.BDTraceImage,
+	}
+
 	// dockerd main loop
 	for {
 		// check if the context is done before each iteration
@@ -127,7 +133,7 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 					logr.Warn("failed to stop container", zap.String("id", session.Id), zap.Error(err))
 				}
 			case enums.SessionStatusPending:
-				if err := startContainersForSession(cm, session); err != nil {
+				if err := startContainersForSession(cm, tc, session); err != nil {
 					logr.Warn("failed to start container", zap.String("id", session.Id), zap.Error(err))
 				}
 			}
@@ -135,12 +141,12 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 	}
 }
 
-func startContainersForSession(cm containers.ContainerManager, session models.Session) error {
+func startContainersForSession(cm containers.ContainerManager, tc bdtracer.BdTracer, session models.Session) error {
 	target := fmt.Sprintf("bedrock-target-%s", session.Id)
 	tracer := fmt.Sprintf("bedrock-tracer-%s", session.Id)
 
 	// create the output directory for the tracer
-	if err := bdtracer.CreateTracerOutputDir(session.Id); err != nil {
+	if err := tc.CreateTracerOutputDir(session.Id); err != nil {
 		return fmt.Errorf("failed to create tracer output directory: %w", err)
 	}
 
@@ -149,10 +155,10 @@ func startContainersForSession(cm containers.ContainerManager, session models.Se
 		context.Background(),
 		&containers.ContainerConfig{
 			Name:    tracer,
-			Image:   bdtracer.BdtraceImage,
-			Cmd:     bdtracer.DefaultTracerCommand(target),
-			Flags:   bdtracer.DefaultContainerFlags(),
-			Volumes: bdtracer.DefaultTracerVolumes(session.Id),
+			Image:   tc.Image,
+			Cmd:     tc.DefaultTracerCommand(target),
+			Flags:   tc.DefaultContainerFlags(),
+			Volumes: tc.DefaultTracerVolumes(session.Id),
 		},
 	); err != nil {
 		return err

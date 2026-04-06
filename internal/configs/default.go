@@ -15,6 +15,7 @@ func Default() *Config {
 			FullStackMode:              false,
 			DockerDHealthCheckInterval: 1 * time.Minute,
 			SessionStatusCheckInterval: 30 * time.Second,
+			BDTraceImage:               "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.6-beta",
 		},
 		Dockerd: &DockerdConfig{
 			Name:          "hostname",
@@ -23,11 +24,14 @@ func Default() *Config {
 			APISocketPort: 8081,
 			APITimeout:    10 * time.Second,
 			PullInterval:  30 * time.Second,
+			BDTraceImage:  "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.6-beta",
+			DataDir:       "/tmp/bedrock-logs",
 		},
 		FileMD: &FileMDConfig{
 			LogLevel:    "info",
 			APIHTTPHost: "127.0.0.1",
 			APIHTTPPort: 8081,
+			DataDir:     "/tmp/bedrock-logs",
 		},
 	}
 }
