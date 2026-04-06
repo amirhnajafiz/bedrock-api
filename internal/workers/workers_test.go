@@ -10,6 +10,7 @@ import (
 	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
 	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 	"github.com/amirhnajafiz/bedrock-api/internal/workers"
+	"github.com/amirhnajafiz/bedrock-api/pkg/enums"
 	"github.com/amirhnajafiz/bedrock-api/pkg/models"
 )
 
@@ -26,6 +27,7 @@ func TestWorkerCheckExpiredSessions(t *testing.T) {
 		Id:        "1",
 		DockerDId: "d1",
 		CreatedAt: time.Now(),
+		Status:    enums.SessionStatusPending,
 		Spec: models.Spec{
 			TTL: 2 * time.Second,
 		},
@@ -35,16 +37,20 @@ func TestWorkerCheckExpiredSessions(t *testing.T) {
 	go workers.WorkerCheckExpiredSessions(ctx, logr.Named("session-worker"), 1*time.Second)
 
 	// session must exist now
-	if _, err := ss.GetSession("1", "d1"); err != nil {
+	if sess, err := ss.GetSession("1", "d1"); err != nil {
 		t.Errorf("Expected session to exist, got error: %v", err)
+	} else if sess.Status != enums.SessionStatusPending {
+		t.Errorf("Expected session status to be pending, got: %v", sess.Status)
 	}
 
 	// wait for a short period to allow the worker to run
 	time.Sleep(5 * time.Second)
 
 	// session must not exist after TTL has expired
-	if _, err := ss.GetSession("1", "d1"); err == nil {
-		t.Errorf("Expected session to be expired and removed, but it still exists")
+	if sess, err := ss.GetSession("1", "d1"); err != nil {
+		t.Errorf("Expected session to exist, got error: %v", err)
+	} else if sess.Status != enums.SessionStatusFinished {
+		t.Errorf("Expected session status to be finished, got: %v", sess.Status)
 	}
 
 	// cancel the context to stop the worker

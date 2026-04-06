@@ -7,6 +7,7 @@ import (
 	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
 	"github.com/amirhnajafiz/bedrock-api/internal/scheduler"
 	"github.com/amirhnajafiz/bedrock-api/internal/storage"
+	"github.com/amirhnajafiz/bedrock-api/pkg/enums"
 	"go.uber.org/zap"
 )
 
@@ -35,8 +36,9 @@ func WorkerCheckExpiredSessions(ctx context.Context, logr *zap.Logger, interval 
 			// loop through the sessions in the session store and remove any that have expired
 			for _, session := range records {
 				if session.CreatedAt.Add(session.Spec.TTL).Before(timeSnapshot) {
-					if err := ss.DeleteSession(session.Id, session.DockerDId); err != nil {
-						logr.Error("failed to delete session", zap.Error(err))
+					session.Status = enums.SessionStatusFinished
+					if err := ss.SaveSession(session); err != nil {
+						logr.Error("failed to update session", zap.Error(err))
 					}
 				}
 			}
