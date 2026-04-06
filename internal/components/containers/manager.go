@@ -10,13 +10,13 @@ import (
 // Implementations must be safe for concurrent use.
 type ContainerManager interface {
 	// Start starts a new container. Returns the container ID.
-	Start(ctx context.Context, cfg ContainerConfig) (string, error)
+	Start(ctx context.Context, cfg *ContainerConfig) (string, error)
 	// StoreLogs writes the container's stdout and stderr to the given file path.
 	StoreLogs(ctx context.Context, containerID string, filePath string) error
 	// List returns all containers managed by this instance.
-	List(ctx context.Context) ([]ContainerInfo, error)
+	List(ctx context.Context) ([]*ContainerInfo, error)
 	// Get returns information about a specific container.
-	Get(ctx context.Context, containerID string) (ContainerInfo, error)
+	Get(ctx context.Context, containerID string) (*ContainerInfo, error)
 	// Stop stops a running container.
 	Stop(ctx context.Context, containerID string) error
 	// Remove removes a container.

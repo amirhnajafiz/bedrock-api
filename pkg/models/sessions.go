@@ -26,6 +26,6 @@ type Spec struct {
 	Image string `json:"image"`
 	// Command is the command to be executed in the Docker container, provided by the client.
 	Command string `json:"command"`
-	// TTL is the time-to-live for the session in seconds, provided by the client.
-	TTL int `json:"ttl"`
+	// TTL is the time-to-live for the session, provided by the client.
+	TTL time.Duration `json:"ttl"`
 }

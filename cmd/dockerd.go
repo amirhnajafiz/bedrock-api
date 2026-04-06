@@ -147,7 +147,7 @@ func startContainersForSession(cm containers.ContainerManager, session models.Se
 	// start the tracer container
 	if _, err := cm.Start(
 		context.Background(),
-		containers.ContainerConfig{
+		&containers.ContainerConfig{
 			Name:  tracer,
 			Image: "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.6-beta",
 			Cmd: []string{
@@ -175,7 +175,7 @@ func startContainersForSession(cm containers.ContainerManager, session models.Se
 	// start the target container
 	if _, err := cm.Start(
 		context.Background(),
-		containers.ContainerConfig{
+		&containers.ContainerConfig{
 			Name:  target,
 			Image: session.Spec.Image,
 			Cmd:   strings.Split(session.Spec.Command, " "),

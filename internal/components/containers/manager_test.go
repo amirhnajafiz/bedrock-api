@@ -29,7 +29,7 @@ func TestCreate(t *testing.T) {
 
 	mgr := &dockerManager{client: mock}
 
-	id, err := mgr.Start(context.Background(), ContainerConfig{
+	id, err := mgr.Start(context.Background(), &ContainerConfig{
 		Name:  "my-container",
 		Image: "alpine:latest",
 		Env:   []string{"FOO=bar"},
@@ -82,7 +82,7 @@ func TestCreate_NoVolumes(t *testing.T) {
 
 	mgr := &dockerManager{client: mock}
 
-	_, err := mgr.Start(context.Background(), ContainerConfig{
+	_, err := mgr.Start(context.Background(), &ContainerConfig{
 		Name:  "simple",
 		Image: "alpine",
 	})
@@ -100,7 +100,7 @@ func TestStart_StartError(t *testing.T) {
 
 	mgr := &dockerManager{client: mock}
 
-	_, err := mgr.Start(context.Background(), ContainerConfig{Image: "missing:latest"})
+	_, err := mgr.Start(context.Background(), &ContainerConfig{Image: "missing:latest"})
 	if err == nil {
 		t.Fatal("Start with bad image: expected error, got nil")
 	}
@@ -129,7 +129,7 @@ func TestStart_StartErrorCleansUp(t *testing.T) {
 
 	mgr := &dockerManager{client: mock}
 
-	_, err := mgr.Start(context.Background(), ContainerConfig{Image: "alpine"})
+	_, err := mgr.Start(context.Background(), &ContainerConfig{Image: "alpine"})
 	if err == nil {
 		t.Fatal("Start with start failure: expected error, got nil")
 	}
