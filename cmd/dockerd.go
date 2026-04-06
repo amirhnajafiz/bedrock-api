@@ -188,17 +188,36 @@ func startContainersForSession(cm containers.ContainerManager, session models.Se
 }
 
 func stopContainersForSession(cm containers.ContainerManager, session models.Session) error {
+	// create a new background context for stopping containers
+	ctx := context.Background()
+
 	target := fmt.Sprintf("bedrock-target-%s", session.Id)
 	tracer := fmt.Sprintf("bedrock-tracer-%s", session.Id)
 
-	// stop the target container
-	if err := cm.Stop(context.Background(), target); err != nil {
-		return err
+	// check if the target container is running before trying to stop it
+	targetInfo, err := cm.Get(ctx, target)
+	if err != nil {
+		return fmt.Errorf("failed to get container info for %s: %w", target, err)
 	}
 
-	// stop the tracer container
-	if err := cm.Stop(context.Background(), tracer); err != nil {
-		return err
+	if !targetInfo.Exited {
+		// stop the target container
+		if err := cm.Stop(ctx, target); err != nil {
+			return fmt.Errorf("failed to stop container %s: %w", target, err)
+		}
+
+		// stop the tracer container
+		if err := cm.Stop(ctx, tracer); err != nil {
+			return fmt.Errorf("failed to stop container %s: %w", tracer, err)
+		}
+	}
+
+	// remove both containers after stopping
+	if err := cm.Remove(ctx, target); err != nil {
+		return fmt.Errorf("failed to remove container %s: %w", target, err)
+	}
+	if err := cm.Remove(ctx, tracer); err != nil {
+		return fmt.Errorf("failed to remove container %s: %w", tracer, err)
 	}
 
 	return nil
