@@ -21,7 +21,7 @@ LDFLAGS ?= -s -w
 BUILD_FLAGS ?=
 RUN_FLAGS ?=
 
-.PHONY: help env compile build run test clean lint fmt vet
+.PHONY: help env compile build run test clean lint fmt vet e2e
 
 help:
 	@echo "Available targets:"
@@ -34,6 +34,7 @@ help:
 	@echo "  lint     - Run linter"
 	@echo "  fmt      - Format code"
 	@echo "  vet      - Run go vet"
+	@echo "  e2e      - Run end-to-end tests (requires 'e2e' build tag)"
 
 env:
 	@echo "Go binary: $(GO)"
@@ -56,6 +57,10 @@ run:
 test:
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) \
 		$(GO) test -v ./...
+
+e2e:
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) \
+		$(GO) test -v -tags=e2e ./...
 
 clean:
 	rm -f $(APP_NAME)
