@@ -21,6 +21,8 @@ type ContainerManager interface {
 	Stop(ctx context.Context, containerID string) error
 	// Remove removes a container.
 	Remove(ctx context.Context, containerID string) error
+	// Get client returns the underlying container runtime client.
+	GetClient() ContainerClient
 }
 
 // NewDockerManager returns a ContainerManager backed by the Docker client.

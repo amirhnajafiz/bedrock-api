@@ -29,6 +29,11 @@ type dockerManager struct {
 	client ContainerClient
 }
 
+// GetClient returns the underlying Docker client instance.
+func (m *dockerManager) GetClient() ContainerClient {
+	return m.client
+}
+
 // Start pulls together the container configuration from cfg, creates the
 // container on the Docker host, and starts it.
 func (m *dockerManager) Start(ctx context.Context, cfg *ContainerConfig) (string, error) {

@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/amirhnajafiz/bedrock-api/internal/components/containers"
+
+	"github.com/docker/docker/api/types/image"
 )
 
 // TestDockerManager tests the docker container management functionality of the DockerD.
@@ -114,4 +116,12 @@ func TestDockerManager(t *testing.T) {
 		}
 	}
 	t.Logf("nginx container removed successfully")
+
+	// remove the nginx image to clean up
+	_, err = cm.GetClient().ImageRemove(ctx, "nginx:latest", image.RemoveOptions{})
+	if err != nil {
+		t.Errorf("failed to remove nginx image: %v", err)
+	} else {
+		t.Logf("nginx image removed successfully")
+	}
 }

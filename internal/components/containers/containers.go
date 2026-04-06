@@ -24,6 +24,7 @@ type ContainerClient interface {
 	// Image management
 	ImageInspectWithRaw(ctx context.Context, imageName string) (image.InspectResponse, []byte, error)
 	ImagePull(ctx context.Context, refStr string, options image.PullOptions) (io.ReadCloser, error)
+	ImageRemove(ctx context.Context, imageName string, options image.RemoveOptions) ([]image.DeleteResponse, error)
 }
 
 // ContainerConfig holds the parameters needed to create a container.

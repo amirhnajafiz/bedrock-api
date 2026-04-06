@@ -88,6 +88,11 @@ func (m *mockDockerClient) ImagePull(ctx context.Context, refStr string, options
 	return io.NopCloser(&bytes.Buffer{}), nil
 }
 
+func (m *mockDockerClient) ImageRemove(ctx context.Context, imageName string, options image.RemoveOptions) ([]image.DeleteResponse, error) {
+	// this method is not used in the current tests, so we can return a default value.
+	return nil, nil
+}
+
 // newMockLogReader returns an io.ReadCloser whose content is encoded in the
 // Docker multiplexed stream format so that stdcopy.StdCopy can decode it.
 func newMockLogReader(content string) io.ReadCloser {
