@@ -23,16 +23,14 @@ type ZMQServer struct {
 	// private modules
 	eventHandlers int
 	address       string
-	ctx           context.Context
 	sessionStore  sessions.SessionStore
 	stateMachine  *statemachine.StateMachine
 }
 
 // Build initializes the ZMQServer with the specified address and returns the server instance.
-func (z ZMQServer) Build(address string, eventHandlers int, ctx context.Context) *ZMQServer {
+func (z ZMQServer) Build(address string, eventHandlers int) *ZMQServer {
 	z.address = address
 	z.eventHandlers = eventHandlers
-	z.ctx = ctx
 
 	z.sessionStore = sessions.NewSessionStore(storage.NewGoCache())
 	z.stateMachine = statemachine.NewStateMachine()
@@ -40,7 +38,7 @@ func (z ZMQServer) Build(address string, eventHandlers int, ctx context.Context)
 	return &z
 }
 
-func (z ZMQServer) Serve() error {
+func (z ZMQServer) Serve(ctx context.Context) error {
 	// create a router socket and bind it to the specified host and port
 	router, err := goczmq.NewRouter(z.address)
 	if err != nil {
@@ -51,18 +49,18 @@ func (z ZMQServer) Serve() error {
 	z.Logr.Info("server started", zap.String("address", z.address))
 
 	// create an errgroup with the provided context
-	erg, ctx := errgroup.WithContext(z.ctx)
+	erg, ectx := errgroup.WithContext(ctx)
 
 	// start the socket receiver, handler, and sender goroutines
 	in := make(chan [][]byte)
 	out := make(chan [][]byte)
 
-	erg.Go(func() error { return z.socketReceiver(ctx, router, in) })
-	erg.Go(func() error { return z.socketSender(ctx, router, out) })
+	erg.Go(func() error { return z.socketReceiver(ectx, router, in) })
+	erg.Go(func() error { return z.socketSender(ectx, router, out) })
 
 	// main loop to handle incoming messages and send responses
 	for i := 0; i < z.eventHandlers; i++ {
-		erg.Go(func() error { return z.socketHandler(ctx, in, out) })
+		erg.Go(func() error { return z.socketHandler(ectx, in, out) })
 	}
 
 	return erg.Wait()

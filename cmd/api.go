@@ -89,9 +89,10 @@ func StartAPI(ctx context.Context, cfg *configs.APIConfig) error {
 	}.Build(
 		zmqAddress,
 		cfg.SocketHandlers,
-		ctx,
 	)
-	erg.Go(zmqServer.Serve)
+	erg.Go(func() error {
+		return zmqServer.Serve(ctx)
+	})
 
 	// build and start the HTTP server in a separate goroutine
 	httpServer := http.HTTPServer{
@@ -100,7 +101,9 @@ func StartAPI(ctx context.Context, cfg *configs.APIConfig) error {
 		fmt.Sprintf("%s:%d", cfg.HTTPHost, cfg.HTTPPort),
 		zmqAddress,
 	)
-	erg.Go(httpServer.Serve)
+	erg.Go(func() error {
+		return httpServer.Serve()
+	})
 
 	// wait for all servers to finish
 	if err := erg.Wait(); err != nil {
