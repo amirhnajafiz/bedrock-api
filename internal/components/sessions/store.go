@@ -5,6 +5,7 @@ import (
 
 	"github.com/amirhnajafiz/bedrock-api/internal/storage"
 	"github.com/amirhnajafiz/bedrock-api/pkg/models"
+	"github.com/amirhnajafiz/bedrock-api/pkg/xerrors"
 )
 
 // sessionPrefix namespaces all session keys inside the shared KVStorage backend.
@@ -50,6 +51,29 @@ func (s *sessionStore) GetSession(id, dockerdId string) (*models.Session, error)
 	}
 
 	return session, nil
+}
+
+// GetSessionById searches all namespaces for the given session id and returns
+// the first match. This performs a prefix scan of all sessions and checks the
+// session id field.
+func (s *sessionStore) GetSessionById(id string) (*models.Session, error) {
+	// list all sessions and find by id
+	bytes, err := s.backend.List(sessionPrefix)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, b := range bytes {
+		var session *models.Session
+		if err := json.Unmarshal(b, &session); err != nil {
+			return nil, err
+		}
+		if session != nil && session.Id == id {
+			return session, nil
+		}
+	}
+
+	return nil, xerrors.StorageErrNotFound
 }
 
 // ListSessions returns the raw bytes of every stored session across all daemons.

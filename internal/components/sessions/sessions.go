@@ -16,6 +16,12 @@ type SessionStore interface {
 	// Returns ErrNotFound when absent.
 	GetSession(id, dockerdId string) (*models.Session, error)
 
+	// GetSessionById retrieves a session by id across all Docker daemon namespaces.
+	// This is useful when the caller does not know which dockerd instance owns
+	// the session and wants the store to resolve it. Returns ErrNotFound when
+	// absent.
+	GetSessionById(id string) (*models.Session, error)
+
 	// ListSessions returns the raw bytes of every stored session across all daemons.
 	ListSessions() ([]*models.Session, error)
 

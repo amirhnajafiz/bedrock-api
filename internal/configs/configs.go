@@ -21,7 +21,7 @@ type APIConfig struct {
 	SocketPort                 int           `koanf:"socket_port" validate:"min=1,max=65535"`
 	SocketHandlers             int           `koanf:"socket_handlers" validate:"min=1"`
 	FullStackMode              bool          `koanf:"full_stack_mode"`
-	DockerDHealthCheckInterval time.Duration `koanf:"dockerd_health_check_interval" validate:"duration"`
+	DockerDHealthCheckInterval time.Duration `koanf:"dockerd_health_check_interval"`
 }
 
 // DockerdConfig represents the configuration for the Docker Daemon.
@@ -30,8 +30,8 @@ type DockerdConfig struct {
 	LogLevel      string        `koanf:"log_level" validate:"oneof=debug info warn error"`
 	APISocketHost string        `koanf:"api_socket_host" validate:"ip"`
 	APISocketPort int           `koanf:"api_socket_port" validate:"min=1,max=65535"`
-	APITimeout    time.Duration `koanf:"api_timeout" validate:"duration"`
-	PullInterval  time.Duration `koanf:"pull_interval" validate:"duration"`
+	APITimeout    time.Duration `koanf:"api_timeout"`
+	PullInterval  time.Duration `koanf:"pull_interval"`
 }
 
 // FileMDConfig represents the configuration for the File Management Daemon.
