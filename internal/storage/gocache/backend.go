@@ -1,8 +1,3 @@
-// Package gocache provides an in-memory storage backend built on top of
-// github.com/eko/gocache (backed by github.com/patrickmn/go-cache).
-// It implements the storage.KVStorage interface and can therefore be used
-// to back any higher-level store (SessionStore, EventStore, …) without those
-// stores knowing about the underlying cache library.
 package gocache
 
 import (
@@ -14,6 +9,7 @@ import (
 	"time"
 
 	"github.com/amirhnajafiz/bedrock-api/pkg/xerrors"
+
 	lib "github.com/eko/gocache/lib/v4/cache"
 	lib_store "github.com/eko/gocache/lib/v4/store"
 	gocache_store "github.com/eko/gocache/store/go_cache/v4"
@@ -22,16 +18,12 @@ import (
 
 // Backend is a thread-safe, in-memory key-value store backed by eko/gocache
 // with a go-cache store adapter.
-// The zero value is not usable; create instances with NewBackend.
 type Backend struct {
 	cache  *lib.Cache[[]byte]
-	client *goc.Cache // retained for List prefix scans via Items()
+	client *goc.Cache
 }
 
-// NewBackend returns a Backend with no entry expiration.
-// The underlying go-cache janitor runs every cleanupInterval to evict
-// entries that were stored with an explicit TTL (none are in this project,
-// but the option is there for future use).
+// NewBackend returns a new Backend instance with the specified cleanup interval for expired entries.
 func NewBackend(cleanupInterval time.Duration) *Backend {
 	client := goc.New(goc.NoExpiration, cleanupInterval)
 
@@ -47,15 +39,16 @@ func (b *Backend) Set(key string, value []byte) error {
 }
 
 // Get retrieves the raw bytes stored under key.
-// Returns storage.ErrNotFound when the key is absent.
 func (b *Backend) Get(key string) ([]byte, error) {
 	val, err := b.cache.Get(context.Background(), key)
 	if err != nil {
 		if errors.Is(err, lib_store.NotFound{}) {
 			return nil, xerrors.StorageErrNotFound
 		}
+
 		return nil, err
 	}
+
 	return val, nil
 }
 
@@ -67,17 +60,14 @@ func (b *Backend) Delete(key string) error {
 // List returns the values of all entries whose keys match wildcard.
 // If wildcard contains no glob tokens, it is treated as a key prefix.
 // If wildcard contains glob tokens ('*', '?', '['), path.Match is used.
-// An empty wildcard returns every value currently in the store.
-// The returned slice is a snapshot; mutations to it do not affect the cache.
-// eko/gocache does not expose a scan API, so this method accesses the
-// underlying go-cache client directly via Items().
 func (b *Backend) List(wildcard string) ([][]byte, error) {
 	items := b.client.Items()
+
 	var result [][]byte
 	hasGlob := strings.ContainsAny(wildcard, "*?[")
 	if hasGlob {
 		if _, err := path.Match(wildcard, ""); err != nil {
-			return nil, fmt.Errorf("gocache: invalid wildcard %q: %w", wildcard, err)
+			return nil, xerrors.StorageErrInvalidWildcard
 		}
 	}
 
