@@ -19,6 +19,11 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	targetPrefix = "bedrock-target-"
+	tracerPrefix = "bedrock-tracer-"
+)
+
 // Dockerd represents the Docker Daemon command.
 type Dockerd struct {
 	Ctx context.Context
@@ -43,13 +48,13 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 	// create a new logger instance
 	logr := logger.New(cfg.LogLevel)
 
-	// setting the dockerd name
-	name := cfg.Name
-	if name == "hostname" {
-		name, _ = os.Hostname()
+	// setting the dockerd dockerd
+	dockerd := cfg.Name
+	if dockerd == "hostname" {
+		dockerd, _ = os.Hostname()
 	}
-	if len(name) == 0 {
-		name = uuid.NewString()
+	if len(dockerd) == 0 {
+		dockerd = uuid.NewString()
 	}
 
 	// build the ZMQ client
@@ -84,6 +89,12 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 		// set sessions with containers data
 		sessions := make([]models.Session, 0)
 		for _, c := range cts {
+			name := strings.TrimPrefix(c.Summary.Names[0], "/")
+			id, ok := strings.CutPrefix(name, targetPrefix)
+			if !ok {
+				continue
+			}
+
 			status := enums.SessionStatusRunning
 			if c.Exited {
 				if c.ExitCode == 0 {
@@ -94,13 +105,19 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 			}
 
 			sessions = append(sessions, models.Session{
-				Id:     c.ID,
-				Status: status,
+				Id:        id,
+				DockerDId: dockerd,
+				Status:    status,
+				CreatedAt: time.Unix(c.Summary.Created, 0),
+				Spec: models.Spec{
+					Image:   c.Summary.Image,
+					Command: c.Summary.Command,
+				},
 			})
 		}
 
 		// build a packet with the container sessions
-		packet := models.NewPacket().WithSender(name).WithSessions(sessions...)
+		packet := models.NewPacket().WithSender(dockerd).WithSessions(sessions...)
 
 		// send the packet to ZMQ server
 		resp, err := zclient.SendWithTimeout(packet.ToBytes(), int(cfg.APITimeout.Seconds()))
@@ -116,7 +133,6 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 			continue
 		}
 
-		// TODO: make changes to reach to API state
 		for _, session := range respPacket.Sessions {
 			switch session.Status {
 			case enums.SessionStatusStopped:
@@ -126,12 +142,10 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 					logr.Warn("failed to stop container", zap.String("id", session.Id), zap.Error(err))
 				}
 			case enums.SessionStatusPending:
-				// determine tracer image tag (default to latest)
 				tracerTag := "latest"
 				if cfg != nil && len(strings.TrimSpace(cfg.TracerTag)) > 0 {
 					tracerTag = cfg.TracerTag
 				}
-
 				if err := startContainersForSession(cm, session, tracerTag); err != nil {
 					logr.Warn("failed to start container", zap.String("id", session.Id), zap.Error(err))
 				}
@@ -141,8 +155,8 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 }
 
 func startContainersForSession(cm containers.ContainerManager, session models.Session, tracerTag string) error {
-	target := fmt.Sprintf("bedrock-target-%s", session.Id)
-	tracer := fmt.Sprintf("bedrock-tracer-%s", session.Id)
+	target := fmt.Sprintf("%s%s", targetPrefix, session.Id)
+	tracer := fmt.Sprintf("%s%s", tracerPrefix, session.Id)
 
 	// create tracing output directory for the session
 	outputDir := fmt.Sprintf("/tmp/bedrock-outputs/%s", session.Id)
@@ -199,8 +213,8 @@ func startContainersForSession(cm containers.ContainerManager, session models.Se
 }
 
 func stopContainersForSession(cm containers.ContainerManager, session models.Session) error {
-	target := fmt.Sprintf("bedrock-target-%s", session.Id)
-	tracer := fmt.Sprintf("bedrock-tracer-%s", session.Id)
+	target := fmt.Sprintf("%s%s", targetPrefix, session.Id)
+	tracer := fmt.Sprintf("%s%s", tracerPrefix, session.Id)
 
 	// stop the target container
 	if err := cm.Stop(context.Background(), target); err != nil {

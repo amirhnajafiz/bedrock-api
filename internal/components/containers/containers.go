@@ -38,18 +38,10 @@ type ContainerConfig struct {
 
 // ContainerInfo describes a container's current state.
 type ContainerInfo struct {
-	// Unique identifier of the container.
-	ID string
-	// Human-readable name of the container.
-	Name string
-	// Image the container was created from, e.g. "ubuntu:latest".
-	Image string
-	// Current status of the container, e.g. "running", "exited".
-	Status string
+	// Summary of container
+	Summary container.Summary
 	// Exited indicates whether the container has finished execution.
 	Exited bool
 	// Exit code if the container has finished.
 	ExitCode int
-	// Creation timestamp of the container.
-	CreatedAt int64
 }

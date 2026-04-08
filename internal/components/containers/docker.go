@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
@@ -143,32 +142,21 @@ func (m *dockerManager) List(ctx context.Context) ([]ContainerInfo, error) {
 	}
 
 	infos := make([]ContainerInfo, 0, len(raw))
-	for _, c := range raw {
-		name := ""
-		if len(c.Names) > 0 {
-			name = strings.TrimPrefix(c.Names[0], "/")
-		}
-
-		// create a container info instance
-		cinfo := ContainerInfo{
-			ID:        c.ID,
-			Name:      name,
-			Image:     c.Image,
-			Status:    c.Status,
-			Exited:    false,
-			ExitCode:  0,
-			CreatedAt: c.Created,
-		}
-
+	for _, summary := range raw {
+		exited, exitCode := false, 0
 		// call ContainerInspect to get the exit code if the container has finished
-		if inspect, err := m.client.ContainerInspect(ctx, c.ID); err == nil {
+		if inspect, err := m.client.ContainerInspect(ctx, summary.ID); err == nil {
 			if inspect.State != nil && !inspect.State.Running {
-				cinfo.Exited = true
-				cinfo.ExitCode = int(inspect.State.ExitCode)
+				exited = true
+				exitCode = 0
 			}
 		}
 
-		infos = append(infos, cinfo)
+		infos = append(infos, ContainerInfo{
+			Summary:  summary,
+			Exited:   exited,
+			ExitCode: exitCode,
+		})
 	}
 
 	return infos, nil
