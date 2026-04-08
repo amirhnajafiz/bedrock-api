@@ -2,12 +2,17 @@ package containers
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"os"
 	"strings"
 
+	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 )
 
@@ -20,12 +25,36 @@ const (
 
 // dockerManager implements ContainerManager using the Docker Engine API.
 type dockerManager struct {
-	client ContainerClient
+	client client.APIClient
+}
+
+func (m *dockerManager) ensureImage(ctx context.Context, imageName string) error {
+	_, err := m.client.ImageInspect(ctx, imageName)
+	if err == nil {
+		return nil
+	}
+	if !errdefs.IsNotFound(err) {
+		return fmt.Errorf("checking image %s: %w", imageName, err)
+	}
+	reader, err := m.client.ImagePull(ctx, imageName, image.PullOptions{})
+	if err != nil {
+		return fmt.Errorf("pulling image %s: %w", imageName, err)
+	}
+	defer reader.Close()
+	if _, err := io.Copy(os.Stdout, reader); err != nil {
+		return fmt.Errorf("streaming image pull %s: %w", imageName, err)
+	}
+	return nil
 }
 
 // Create pulls together the container configuration from cfg, creates the
 // container on the Docker host, and starts it.
 func (m *dockerManager) Create(ctx context.Context, cfg ContainerConfig) (string, error) {
+	// pull image if does not exist
+	if err := m.ensureImage(ctx, cfg.Image); err != nil {
+		return "", err
+	}
+
 	// set up volume mounts
 	var mounts []mount.Mount
 	for hostPath, containerPath := range cfg.Volumes {
