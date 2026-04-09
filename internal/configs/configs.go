@@ -28,14 +28,15 @@ type APIConfig struct {
 
 // DockerdConfig represents the configuration for the Docker Daemon.
 type DockerdConfig struct {
-	Name               string `koanf:"name"`
-	LogLevel           string `koanf:"log_level" validate:"oneof=debug info warn error"`
-	APISocketHost      string `koanf:"api_socket_host" validate:"ip"`
-	APISocketPort      int    `koanf:"api_socket_port" validate:"min=1,max=65535"`
-	APITimeout         string `koanf:"api_timeout" validate:"duration"`
-	PullInterval       string `koanf:"pull_interval" validate:"duration"`
-	BedrockTracerImage string `koanf:"bedrock_tracer_image"`
-	DataDir            string `koanf:"data_dir"`
+	Name                   string `koanf:"name"`
+	LogLevel               string `koanf:"log_level" validate:"oneof=debug info warn error"`
+	APISocketHost          string `koanf:"api_socket_host" validate:"ip"`
+	APISocketPort          int    `koanf:"api_socket_port" validate:"min=1,max=65535"`
+	APITimeout             string `koanf:"api_timeout" validate:"duration"`
+	PullInterval           string `koanf:"pull_interval" validate:"duration"`
+	BedrockTracerImage     string `koanf:"bedrock_tracer_image"`
+	DataDir                string `koanf:"data_dir"`
+	ContainerRuntimeClient string `koanf:"container_runtime_client" validate:"oneof=simulator docker"`
 }
 
 // FileMDConfig represents the configuration for the File Management Daemon.

@@ -2,6 +2,7 @@ package containers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/docker/docker/client"
 )
@@ -25,11 +26,23 @@ type ContainerManager interface {
 	GetClient() ContainerClient
 }
 
-// NewDockerManager returns a ContainerManager backed by the Docker client.
-func NewDockerManager() (ContainerManager, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return nil, err
+// NewContainerManager returns a ContainerManager backed by the runtime client.
+func NewContainerManager(rc string) (ContainerManager, error) {
+	var (
+		err error
+		cli ContainerClient
+	)
+
+	switch rc {
+	case "simulator":
+		cli = newSimulatorClient()
+	case "docker":
+		cli, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unsupported runtime client: %s", rc)
 	}
 
 	return &dockerManager{client: cli}, nil

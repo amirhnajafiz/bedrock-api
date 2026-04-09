@@ -51,7 +51,7 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 	}
 
 	// create Docker client and container manager
-	cm, err := containers.NewDockerManager()
+	cm, err := containers.NewContainerManager(cfg.ContainerRuntimeClient)
 	if err != nil {
 		logr.Error("failed to create Docker Manager", zap.Error(err))
 		return err

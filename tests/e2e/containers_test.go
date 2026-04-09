@@ -20,7 +20,7 @@ func TestDockerManager(t *testing.T) {
 	defer ctx.Done()
 
 	// create a container manager
-	cm, err := containers.NewDockerManager()
+	cm, err := containers.NewContainerManager("docker")
 	if err != nil {
 		t.Fatalf("failed to create container manager: %v", err)
 	}
