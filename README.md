@@ -306,7 +306,7 @@ Response (application/json): array of Session objects. Each Session has the shap
   "spec": {
     "image": "<docker-image>",
     "command": "<command-string>",
-    "ttl": <seconds>
+    "ttl": "<duration>"
   }
 }
 ```
