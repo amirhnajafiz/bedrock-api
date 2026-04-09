@@ -21,8 +21,8 @@ type ZMQServer struct {
 	Logr                 *zap.Logger
 
 	// private modules
-	eventHandlers int
 	address       string
+	eventHandlers int
 	ctx           context.Context
 	sessionStore  sessions.SessionStore
 	stateMachine  *statemachine.StateMachine

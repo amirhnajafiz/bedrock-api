@@ -27,7 +27,7 @@ func initVars() map[string]string {
 
 func main() {
 	// catch os signals for graceful shutdown
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	// create root cmd

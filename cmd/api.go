@@ -94,6 +94,7 @@ func StartAPI(ctx context.Context, cfg *configs.APIConfig) error {
 		Logr: logr.Named("http"),
 	}.Build(
 		fmt.Sprintf("%s:%d", cfg.HTTPHost, cfg.HTTPPort),
+		ctx,
 		zmqAddress,
 	)
 	erg.Go(httpServer.Serve)

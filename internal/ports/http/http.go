@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/amirhnajafiz/bedrock-api/internal/components/sessions"
 	zmqclient "github.com/amirhnajafiz/bedrock-api/internal/components/zmq_client"
@@ -21,6 +23,7 @@ type HTTPServer struct {
 
 	// private modules
 	address      string
+	ctx          context.Context
 	scheduler    scheduler.Scheduler
 	sessionStore sessions.SessionStore
 	zclient      *zmqclient.ZMQClient
@@ -28,8 +31,10 @@ type HTTPServer struct {
 }
 
 // NewHTTPServer creates and returns a new instance of HTTPServer.
-func (h HTTPServer) Build(address, socketAddress string) *HTTPServer {
+// Build initializes the HTTPServer and stores the lifecycle context.
+func (h HTTPServer) Build(address string, ctx context.Context, socketAddress string) *HTTPServer {
 	h.address = address
+	h.ctx = ctx
 
 	h.scheduler = scheduler.NewRoundRobin()
 	h.sessionStore = sessions.NewSessionStore(storage.NewGoCache())
@@ -39,6 +44,7 @@ func (h HTTPServer) Build(address, socketAddress string) *HTTPServer {
 	return &h
 }
 
+// Serve starts the HTTP server and listens for the stored context cancellation to gracefully shut it down.
 func (h HTTPServer) Serve() error {
 	// create a new echo instance
 	e := echo.New()
@@ -84,10 +90,27 @@ func (h HTTPServer) Serve() error {
 		h.Logr.Info("registered route", zap.String("method", route.Method), zap.String("path", route.Path))
 	}
 
-	// start the server
-	if err := e.Start(h.address); err != nil {
-		return fmt.Errorf("failed to start echo server: %v", err)
-	}
+	// create an http.Server so we can control shutdown
+	srv := &http.Server{Addr: h.address, Handler: e}
 
-	return nil
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.ListenAndServe()
+	}()
+
+	select {
+	case <-h.ctx.Done():
+		if err := srv.Close(); err != nil {
+			return fmt.Errorf("error during http shutdown: %v", err)
+		}
+		if err := <-errCh; err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("server exited with error: %v", err)
+		}
+		return nil
+	case err := <-errCh:
+		if err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("failed to start http server: %v", err)
+		}
+		return nil
+	}
 }
