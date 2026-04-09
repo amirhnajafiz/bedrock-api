@@ -38,16 +38,15 @@ func (d Daemon) Build(name, datadir, tracerImage, apiAddress string) *Daemon {
 
 // Serve starts the daemon and polls for sessions from API.
 func (d Daemon) Serve(ctx context.Context) error {
+	d.Logr.Info("starting Docker Daemon", zap.String("name", d.name))
+
 	for {
-		// check if the context is done before each iteration
+		// interval between each API call with context cancellation
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		default:
+		case <-time.After(d.PullInterval):
 		}
-
-		// interval between each API call
-		time.Sleep(d.PullInterval)
 
 		// prepare the packet with the current system status
 		packet, err := d.preparePullRequest()

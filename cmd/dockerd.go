@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -67,10 +68,12 @@ func StartDockerd(ctx context.Context, cfg *configs.DockerdConfig) error {
 		APITimeout:       apiTimeout,
 		PullInterval:     pullInterval,
 	}.Build(name, cfg.DataDir, cfg.BedrockTracerImage, fmt.Sprintf("tcp://%s:%d", cfg.APISocketHost, cfg.APISocketPort))
-	if err := daemonInstance.Serve(ctx); err != nil {
+	if err := daemonInstance.Serve(ctx); err != nil && !errors.Is(err, context.Canceled) {
 		logr.Error("failed to start daemon", zap.Error(err))
 		return err
 	}
+
+	logr.Info("Docker Daemon stopped gracefully")
 
 	return nil
 }

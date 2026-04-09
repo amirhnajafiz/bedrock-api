@@ -30,8 +30,8 @@ func DefaultDockerdConfig() *DockerdConfig {
 		LogLevel:           "info",
 		APISocketHost:      "127.0.0.1",
 		APISocketPort:      8081,
-		APITimeout:         "10s",
-		PullInterval:       "30s",
+		APITimeout:         "5s",
+		PullInterval:       "10s",
 		BedrockTracerImage: "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.6-beta",
 		DataDir:            "/tmp/bedrock-logs",
 	}
