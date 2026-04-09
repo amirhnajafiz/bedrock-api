@@ -33,6 +33,8 @@ func (z ZMQServer) socketReceiver(ctx context.Context, router *goczmq.Sock, chan
 			continue
 		}
 
+		z.Logr.Debug("new message", zap.String("ip", string(request[0])))
+
 		channel <- request
 	}
 }
@@ -94,6 +96,7 @@ func (z ZMQServer) processEvent(event [][]byte) [][]byte {
 
 	// update health status of the sender daemon
 	z.DockerDHealthChannel <- dockerd
+	z.Logr.Debug("new message from daemon", zap.String("dockerd", dockerd))
 
 	// read sessions from packet and update KV storage
 	for _, session := range pkt.Sessions {

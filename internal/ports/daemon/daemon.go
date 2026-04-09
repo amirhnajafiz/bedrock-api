@@ -48,12 +48,16 @@ func (d Daemon) Serve(ctx context.Context) error {
 		case <-time.After(d.PullInterval):
 		}
 
+		d.Logr.Debug("pulling sessions from API")
+
 		// prepare the packet with the current system status
 		packet, err := d.preparePullRequest()
 		if err != nil {
 			d.Logr.Warn("failed to prepare pull request", zap.Error(err))
 			continue
 		}
+
+		d.Logr.Debug("prepared pull request", zap.Any("packet", packet))
 
 		// send the packet to ZMQ server
 		resp, err := d.zclient.SendWithTimeout(packet.ToBytes(), int(d.APITimeout.Seconds()))
@@ -62,6 +66,8 @@ func (d Daemon) Serve(ctx context.Context) error {
 			continue
 		}
 
+		d.Logr.Debug("received response from API", zap.ByteString("response", resp))
+
 		// get the response from ZMQ server
 		respPacket, err := models.PacketFromBytes(resp)
 		if err != nil {
@@ -69,10 +75,14 @@ func (d Daemon) Serve(ctx context.Context) error {
 			continue
 		}
 
+		d.Logr.Debug("parsed response packet", zap.Any("packet", respPacket))
+
 		// sync the local container state with the API state
 		ers := d.syncWithAPI(respPacket.Sessions)
 		for _, er := range ers {
 			d.Logr.Warn("failed to sync with API", zap.Error(er))
 		}
+
+		d.Logr.Debug("finished syncing with API")
 	}
 }
