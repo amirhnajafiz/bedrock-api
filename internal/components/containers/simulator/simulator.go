@@ -244,6 +244,7 @@ func (m *SimulatorContainerManager) Get(ctx context.Context, containerID string)
 		Exited:    false,
 		ExitCode:  0,
 		CreatedAt: createdAt,
+		Labels:    inspect.Config.Labels,
 	}
 
 	// if the container is not running, set the Exited and ExitCode fields

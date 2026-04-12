@@ -276,9 +276,11 @@ func (s *SimulatorContainerClient) ContainerInspect(
 			Name:    "/" + c.name,
 			Created: c.created.Format(time.RFC3339),
 			State:   state,
+			Image:   c.image,
 		},
 		Config: &container.Config{
-			Image: c.image,
+			Image:  c.image,
+			Labels: c.labels,
 		},
 	}, nil
 }
