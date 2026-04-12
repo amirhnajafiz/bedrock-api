@@ -38,8 +38,12 @@ func (z ZMQServer) socketReceiver(ctx context.Context, router *goczmq.Sock, chan
 
 		z.Logr.Debug("received message", zap.String("mac_address", string(request[0])))
 
-		// publish over input channel
-		channel <- request
+		// publish over input channel, avoid if channel is closed
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case channel <- request:
+		}
 	}
 }
 
@@ -68,14 +72,23 @@ func (z ZMQServer) socketHandler(ctx context.Context, in chan [][]byte, out chan
 		case <-ctx.Done():
 			return ctx.Err()
 		case event := <-in:
+			var output [][]byte
+
 			// socket handler needs to have both MAC and event frame
 			if len(event) == 2 {
 				mac := event[0]
 				response := z.processPacketData(event[1])
 
-				out <- [][]byte{mac, response}
+				output = [][]byte{mac, response}
 			} else {
-				out <- event
+				output = event
+			}
+
+			// publish the output to sender channel, avoid if channel is closed
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case out <- output:
 			}
 		}
 	}
