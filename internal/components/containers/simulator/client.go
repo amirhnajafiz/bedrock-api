@@ -1,4 +1,4 @@
-package containers
+package simulator
 
 import (
 	"bytes"
@@ -20,18 +20,19 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// simulatorClient is an in-memory ContainerClient implementation intended for
+// SimulatorContainerClient is an in-memory ContainerClient implementation intended for
 // tests and local simulation where containers are assumed to run successfully.
-type simulatorClient struct {
+type SimulatorContainerClient struct {
 	mu sync.RWMutex
 
 	nextID int64
 
 	images     map[string]struct{}
-	containers map[string]*simContainer
+	containers map[string]*inMemoryContainer
 }
 
-type simContainer struct {
+// inMemoryContainer is a simplified in-memory representation of a container, used by SimulatorContainerClient.
+type inMemoryContainer struct {
 	id      string
 	name    string
 	image   string
@@ -45,22 +46,29 @@ type simContainer struct {
 	stderr string
 }
 
-// newSimulatorClient builds an in-memory simulator that satisfies ContainerClient.
-// Any image names passed in initialImages are treated as already available.
-func newSimulatorClient(initialImages ...string) ContainerClient {
+// NewSimulatorContainerClient creates a new SimulatorContainerClient with the given initial images available.
+func NewSimulatorContainerClient(initialImages ...string) *SimulatorContainerClient {
 	images := make(map[string]struct{}, len(initialImages))
 	for _, img := range initialImages {
 		images[img] = struct{}{}
 	}
 
-	return &simulatorClient{
+	return &SimulatorContainerClient{
 		nextID:     1,
 		images:     images,
-		containers: make(map[string]*simContainer),
+		containers: make(map[string]*inMemoryContainer),
 	}
 }
 
-func (s *simulatorClient) ContainerCreate(_ context.Context, config *container.Config, _ *container.HostConfig, _ *network.NetworkingConfig, _ *ocispec.Platform, containerName string) (container.CreateResponse, error) {
+// ContainerCreate creates a new container with the given configuration and returns its ID.
+func (s *SimulatorContainerClient) ContainerCreate(
+	_ context.Context,
+	config *container.Config,
+	_ *container.HostConfig,
+	_ *network.NetworkingConfig,
+	_ *ocispec.Platform,
+	containerName string,
+) (container.CreateResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -77,7 +85,7 @@ func (s *simulatorClient) ContainerCreate(_ context.Context, config *container.C
 		imageName = config.Image
 	}
 
-	s.containers[id] = &simContainer{
+	s.containers[id] = &inMemoryContainer{
 		id:       id,
 		name:     containerName,
 		image:    imageName,
@@ -92,7 +100,14 @@ func (s *simulatorClient) ContainerCreate(_ context.Context, config *container.C
 	return container.CreateResponse{ID: id}, nil
 }
 
-func (s *simulatorClient) ContainerStart(_ context.Context, containerID string, _ container.StartOptions) error {
+// ContainerStart starts the container with the given ID.
+// In this simulator, we use the tag to determine if the container
+// should fail to start. If the tag "fail" is present, the container will fail to start.
+func (s *SimulatorContainerClient) ContainerStart(
+	_ context.Context,
+	containerID string,
+	_ container.StartOptions,
+) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -101,12 +116,26 @@ func (s *simulatorClient) ContainerStart(_ context.Context, containerID string, 
 		return cerrdefs.ErrNotFound
 	}
 
+	if _, fail := c.labels["fail"]; fail {
+		c.running = false
+		c.exitCode = 1
+		c.stderr = "Simulated container start failure"
+
+		return nil
+	}
+
 	c.running = true
 	c.exitCode = 0
+
 	return nil
 }
 
-func (s *simulatorClient) ContainerStop(_ context.Context, containerID string, _ container.StopOptions) error {
+// ContainerStop stops the container with the given ID.
+func (s *SimulatorContainerClient) ContainerStop(
+	_ context.Context,
+	containerID string,
+	_ container.StopOptions,
+) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -116,11 +145,16 @@ func (s *simulatorClient) ContainerStop(_ context.Context, containerID string, _
 	}
 
 	c.running = false
-	c.exitCode = 0
+
 	return nil
 }
 
-func (s *simulatorClient) ContainerRemove(_ context.Context, containerID string, _ container.RemoveOptions) error {
+// ContainerRemove removes the container with the given ID.
+func (s *SimulatorContainerClient) ContainerRemove(
+	_ context.Context,
+	containerID string,
+	_ container.RemoveOptions,
+) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -129,10 +163,15 @@ func (s *simulatorClient) ContainerRemove(_ context.Context, containerID string,
 	}
 
 	delete(s.containers, containerID)
+
 	return nil
 }
 
-func (s *simulatorClient) ContainerList(_ context.Context, options container.ListOptions) ([]container.Summary, error) {
+// ContainerList returns a list of containers, filtered according to the provided options.
+func (s *SimulatorContainerClient) ContainerList(
+	_ context.Context,
+	options container.ListOptions,
+) ([]container.Summary, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -155,7 +194,7 @@ func (s *simulatorClient) ContainerList(_ context.Context, options container.Lis
 		}
 
 		state := "exited"
-		status := "Exited (0)"
+		status := fmt.Sprintf("Exited (%d)", c.exitCode)
 		if c.running {
 			state = "running"
 			status = "Up"
@@ -180,7 +219,12 @@ func (s *simulatorClient) ContainerList(_ context.Context, options container.Lis
 	return out, nil
 }
 
-func (s *simulatorClient) ContainerLogs(_ context.Context, containerID string, _ container.LogsOptions) (io.ReadCloser, error) {
+// ContainerLogs returns the logs for the container with the given ID.
+func (s *SimulatorContainerClient) ContainerLogs(
+	_ context.Context,
+	containerID string,
+	_ container.LogsOptions,
+) (io.ReadCloser, error) {
 	s.mu.RLock()
 	c, ok := s.containers[containerID]
 	if !ok {
@@ -203,7 +247,11 @@ func (s *simulatorClient) ContainerLogs(_ context.Context, containerID string, _
 	return io.NopCloser(bytes.NewReader(buf.Bytes())), nil
 }
 
-func (s *simulatorClient) ContainerInspect(_ context.Context, containerID string) (container.InspectResponse, error) {
+// ContainerInspect returns detailed information about the container with the given ID.
+func (s *SimulatorContainerClient) ContainerInspect(
+	_ context.Context,
+	containerID string,
+) (container.InspectResponse, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -235,7 +283,11 @@ func (s *simulatorClient) ContainerInspect(_ context.Context, containerID string
 	}, nil
 }
 
-func (s *simulatorClient) ImageInspectWithRaw(_ context.Context, imageName string) (image.InspectResponse, []byte, error) {
+// ImageInspectWithRaw returns detailed information about the image with the given name.
+func (s *SimulatorContainerClient) ImageInspectWithRaw(
+	_ context.Context,
+	imageName string,
+) (image.InspectResponse, []byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -246,7 +298,12 @@ func (s *simulatorClient) ImageInspectWithRaw(_ context.Context, imageName strin
 	return image.InspectResponse{}, nil, nil
 }
 
-func (s *simulatorClient) ImagePull(_ context.Context, refStr string, _ image.PullOptions) (io.ReadCloser, error) {
+// ImagePull simulates pulling an image by adding it to the in-memory set of available images.
+func (s *SimulatorContainerClient) ImagePull(
+	_ context.Context,
+	refStr string,
+	_ image.PullOptions,
+) (io.ReadCloser, error) {
 	s.mu.Lock()
 	s.images[refStr] = struct{}{}
 	s.mu.Unlock()
@@ -260,7 +317,12 @@ func (s *simulatorClient) ImagePull(_ context.Context, refStr string, _ image.Pu
 	return io.NopCloser(strings.NewReader(string(b) + "\n")), nil
 }
 
-func (s *simulatorClient) ImageRemove(_ context.Context, imageName string, _ image.RemoveOptions) ([]image.DeleteResponse, error) {
+// ImageRemove simulates removing an image by deleting it from the in-memory set of available images.
+func (s *SimulatorContainerClient) ImageRemove(
+	_ context.Context,
+	imageName string,
+	_ image.RemoveOptions,
+) ([]image.DeleteResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -269,5 +331,6 @@ func (s *simulatorClient) ImageRemove(_ context.Context, imageName string, _ ima
 	}
 
 	delete(s.images, imageName)
+
 	return []image.DeleteResponse{{Deleted: imageName}}, nil
 }

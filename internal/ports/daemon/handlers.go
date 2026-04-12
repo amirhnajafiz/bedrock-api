@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/amirhnajafiz/bedrock-api/internal/components/containers"
 	"github.com/amirhnajafiz/bedrock-api/pkg/enums"
 	"github.com/amirhnajafiz/bedrock-api/pkg/models"
+
 	"go.uber.org/zap"
 )
 
 // prepares the pull request packet with the current system status, including the list of containers and their statuses.
 func (d Daemon) preparePullRequest() (*models.Packet, error) {
 	// get the list of containers
-	cts, err := d.ContainerManager.List(context.Background())
+	cts, err := d.ContainerManager.List(context.Background(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
@@ -113,10 +113,10 @@ func (d Daemon) startContainersForSession(sessionId string, sessionSpec models.S
 		return fmt.Errorf("failed to create tracer output directory: %w", err)
 	}
 
-	// start the tracer container
-	if id, err := d.ContainerManager.Start(
+	// create the tracer container
+	if id, err := d.ContainerManager.Create(
 		ctx,
-		&containers.ContainerConfig{
+		&models.ContainerConfig{
 			Name:    tracer,
 			Image:   d.tracerImage,
 			Cmd:     defaultTracerCommand(target),
@@ -133,10 +133,10 @@ func (d Daemon) startContainersForSession(sessionId string, sessionSpec models.S
 		d.Logr.Info("container started", zap.String("id", id), zap.String("name", tracer))
 	}
 
-	// start the target container
-	if id, err := d.ContainerManager.Start(
+	// create the target container
+	if id, err := d.ContainerManager.Create(
 		ctx,
-		&containers.ContainerConfig{
+		&models.ContainerConfig{
 			Name:  target,
 			Image: sessionSpec.Image,
 			Cmd:   strings.Split(sessionSpec.Command, " "),
