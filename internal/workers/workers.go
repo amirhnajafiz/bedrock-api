@@ -101,7 +101,7 @@ func WorkerDockerDHealthCheck(ctx context.Context, input chan string, logr *zap.
 }
 
 // WorkerRemoveFinishedSessions checks for finished sessions and marks them as deleted to avoid duplicate ZMQ cleanups.
-// Note: This worker must see a finished session three times before it is marked as deleted, to ensure that the ZMQ server
+// Note: This worker must see a finished session twice before it is marked as deleted, to ensure that the ZMQ server
 // has processed the session status update and performed any necessary cleanups.
 func WorkerRemoveFinishedSessions(ctx context.Context, logr *zap.Logger, interval time.Duration) {
 	// get a reference to the session store instance
@@ -136,7 +136,7 @@ func WorkerRemoveFinishedSessions(ctx context.Context, logr *zap.Logger, interva
 				if session.Status == enums.SessionStatusFinished || session.Status == enums.SessionStatusFailed {
 					finishedSessions[session.Id]++
 
-					if finishedSessions[session.Id] >= 3 {
+					if finishedSessions[session.Id] >= 2 {
 						tmp := time.Now()
 						session.DeletedAt = &tmp
 

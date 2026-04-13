@@ -7,7 +7,7 @@ import (
 )
 
 // TestGoCacheStorage tests the basic functionality of the go-cache storage backend.
-func TestGoCacheStorage(t *testing.T) {
+func TestGoCacheStorageSet(t *testing.T) {
 	// create a new instance of the go-cache storage backend
 	storage := storage.NewGoCache()
 

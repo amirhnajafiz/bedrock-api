@@ -103,3 +103,49 @@ func TestWorkerDockerDHealthCheck(t *testing.T) {
 	// cancel the context to stop the worker
 	cancel()
 }
+
+// TestWorkerRemoveFinishedSessions tests the WorkerRemoveFinishedSessions function
+// to ensure it correctly marks finished sessions for deletion after the specified interval.
+func TestWorkerRemoveFinishedSessions(t *testing.T) {
+	// create a context
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// create a new logger instance
+	logr := logger.New("info")
+
+	// create a session store and add some sessions with different statuses
+	ss := sessions.NewSessionStore(storage.NewGoCache())
+	ss.SaveSession(&models.Session{
+		Id:        "1",
+		DockerDId: "d1",
+		CreatedAt: time.Now(),
+		Status:    enums.SessionStatusFinished,
+	})
+	ss.SaveSession(&models.Session{
+		Id:        "2",
+		DockerDId: "d2",
+		CreatedAt: time.Now(),
+		Status:    enums.SessionStatusFailed,
+	})
+
+	// start the WorkerRemoveFinishedSessions in a separate goroutine
+	go workers.WorkerRemoveFinishedSessions(ctx, logr.Named("remove-sessions"), 1*time.Second)
+
+	time.Sleep(5 * time.Second)
+
+	// check if the sessions have been marked for deletion
+	if sess, err := ss.GetSession("1", "d1"); err != nil {
+		t.Errorf("Expected session to exist, got error: %v", err)
+	} else if sess.DeletedAt == nil {
+		t.Errorf("Expected session to be marked for deletion, but DeletedAt is nil")
+	}
+
+	if sess, err := ss.GetSession("2", "d2"); err != nil {
+		t.Errorf("Expected session to exist, got error: %v", err)
+	} else if sess.DeletedAt == nil {
+		t.Errorf("Expected session to be marked for deletion, but DeletedAt is nil")
+	}
+
+	// cancel the context to stop the worker
+	cancel()
+}
