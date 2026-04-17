@@ -38,6 +38,7 @@ func defaultContainerFlags() map[string]any {
 func defaultTracerVolumes(base, sessionId string) map[string]string {
 	return map[string]string{
 		"/sys":                 "/sys:rw",
+		"/sys/fs/cgroup":       "/sys/fs/cgroup:rw",
 		"/lib/modules":         "/lib/modules:ro",
 		"/var/run/docker.sock": "/var/run/docker.sock",
 		base + "/" + sessionId: "/logs",
