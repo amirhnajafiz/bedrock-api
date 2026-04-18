@@ -20,7 +20,7 @@ func DefaultAPIConfig() *APIConfig {
 		FullStackMode:              false,
 		DockerDHealthCheckInterval: "1m",
 		SessionStatusCheckInterval: "30s",
-		BedrockTracerImage:         "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.6-beta",
+		BedrockTracerImage:         "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.7-beta",
 	}
 }
 
@@ -32,7 +32,7 @@ func DefaultDockerdConfig() *DockerdConfig {
 		APISocketPort:             8081,
 		APITimeout:                "5s",
 		PullInterval:              "10s",
-		BedrockTracerImage:        "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.6-beta",
+		BedrockTracerImage:        "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.7-beta",
 		DataDir:                   "/tmp/bedrock-logs",
 		ContainerRuntimeInterface: "simulator",
 	}
