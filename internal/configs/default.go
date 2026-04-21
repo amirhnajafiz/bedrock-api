@@ -1,7 +1,5 @@
 package configs
 
-import "time"
-
 // Default returns the default configuration for the application.
 func Default() *Config {
 	return &Config{
@@ -22,7 +20,7 @@ func DefaultAPIConfig() *APIConfig {
 		FullStackMode:              false,
 		DockerDHealthCheckInterval: "1m",
 		SessionStatusCheckInterval: "30s",
-		BedrockTracerImage:         "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.6-beta",
+		BedrockTracerImage:         "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.7-beta",
 	}
 }
 
@@ -34,7 +32,7 @@ func DefaultDockerdConfig() *DockerdConfig {
 		APISocketPort:             8081,
 		APITimeout:                "5s",
 		PullInterval:              "10s",
-		BedrockTracerImage:        "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.6-beta",
+		BedrockTracerImage:        "ghcr.io/amirhnajafiz/bedrock-tracer:v0.0.7-beta",
 		DataDir:                   "/tmp/bedrock-logs",
 		ContainerRuntimeInterface: "simulator",
 	}
@@ -47,6 +45,6 @@ func DefaultFileMDConfig() *FileMDConfig {
 		APIHTTPPort:  8081,
 		DataDir:      "/tmp/bedrock-logs",
 		VolumePath:   "/var/lib/bedrock/volumes",
-		PollInterval: 10 * time.Second,
+		PollInterval: "10s",
 	}
 }

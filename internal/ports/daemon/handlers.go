@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/amirhnajafiz/bedrock-api/pkg/enums"
 	"github.com/amirhnajafiz/bedrock-api/pkg/models"
+	"github.com/google/shlex"
 
 	"go.uber.org/zap"
 )
@@ -168,6 +168,11 @@ func (d Daemon) startContainersForSession(sessionId string, sessionSpec models.S
 	target := fmt.Sprintf("bedrock-target-%s", sessionId)
 	tracer := fmt.Sprintf("bedrock-tracer-%s", sessionId)
 
+	cmd, err := shlex.Split(sessionSpec.Command)
+	if err != nil {
+		return fmt.Errorf("invalid command: %w", err)
+	}
+
 	// create the output directory for the tracer
 	if err := createTracerOutputDir(d.datadir, sessionId); err != nil {
 		return fmt.Errorf("failed to create tracer output directory: %w", err)
@@ -206,7 +211,7 @@ func (d Daemon) startContainersForSession(sessionId string, sessionSpec models.S
 		&models.ContainerConfig{
 			Name:  target,
 			Image: sessionSpec.Image,
-			Cmd:   strings.Split(sessionSpec.Command, " "),
+			Cmd:   cmd,
 			Labels: map[string]string{
 				daemonContainerKey:       daemonContainerVal,
 				daemonContainerType:      daemonContainerTypeTarget,

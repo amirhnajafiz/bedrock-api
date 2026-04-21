@@ -87,10 +87,20 @@ func (m *DockerContainerManager) Create(ctx context.Context, cfg *models.Contain
 	// set up volume mounts
 	var mounts []mount.Mount
 	for hostPath, containerPath := range cfg.Volumes {
+		readOnly := false
+
+		if trimmed, ok := strings.CutSuffix(containerPath, ":ro"); ok {
+			readOnly = true
+			containerPath = trimmed
+		} else if trimmed, ok := strings.CutSuffix(containerPath, ":rw"); ok {
+			containerPath = trimmed
+		}
+
 		mounts = append(mounts, mount.Mount{
-			Type:   mount.TypeBind,
-			Source: hostPath,
-			Target: containerPath,
+			Type:     mount.TypeBind,
+			Source:   hostPath,
+			Target:   containerPath,
+			ReadOnly: readOnly,
 		})
 	}
 

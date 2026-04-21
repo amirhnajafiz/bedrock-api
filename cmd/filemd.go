@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/amirhnajafiz/bedrock-api/internal/components/filemd"
 	"github.com/amirhnajafiz/bedrock-api/internal/components/logs"
@@ -47,17 +48,19 @@ func StartFileMD(ctx context.Context, cfg *configs.FileMDConfig) error {
 
 	uploader := filemd.NewHTTPUploader(apiBaseURL)
 
+	pollInterval, _ := time.ParseDuration(cfg.PollInterval)
+
 	daemon := &filemd.Daemon{
 		Scanner:      scanner,
 		Uploader:     uploader,
 		VolumePath:   cfg.VolumePath,
-		PollInterval: cfg.PollInterval,
+		PollInterval: pollInterval,
 		Logger:       logr.Named("filemd"),
 	}
 
 	logr.Info("starting filemd",
 		zap.String("volume_path", cfg.VolumePath),
-		zap.Duration("poll_interval", cfg.PollInterval),
+		zap.Duration("poll_interval", pollInterval),
 		zap.String("api_base_url", apiBaseURL),
 	)
 

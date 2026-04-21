@@ -324,8 +324,6 @@ GET /api/sessions/:id/logs
 
 Returns session tracing logs.
 
-Note: endpoint is currently not implemented in the codebase (returns HTTP 501).
-
 Example curl (get session logs):
 
 ```sh
@@ -338,9 +336,7 @@ curl -X GET http://localhost:8080/api/sessions/<session-id>/logs
 POST /api/sessions/:id/logs
 ```
 
-Uploads session tracing logs.
-
-Intended usage: upload tracing artifacts for the given session. The current handlers are not implemented in the codebase (returns HTTP 501). When implemented, this endpoint is expected to accept file uploads (multipart/form-data) containing the logs/artifacts for the session.
+Uploads session tracing logs. This endpoint is expected to be used by the FileMD service to accept file uploads (multipart/form-data) containing the logs/artifacts for the session.
 
 Example curl (upload session logs):
 
@@ -353,10 +349,16 @@ curl -X POST http://localhost:8080/api/sessions/<session-id>/logs \
 
 * Docker
 * Go 1.25
+* build-essential
 * libzmq3-dev
 * libczmq-dev
 * libsodium-dev
 * pkg-config
+
+``` sh
+sudo apt update
+sudo apt install build-essential libzmq3-dev libczmq-dev libsodium-dev pkg-config -y
+```
 
 ## Build & Run
 
