@@ -349,10 +349,16 @@ curl -X POST http://localhost:8080/api/sessions/<session-id>/logs \
 
 * Docker
 * Go 1.25
+* build-essential
 * libzmq3-dev
 * libczmq-dev
 * libsodium-dev
 * pkg-config
+
+``` sh
+sudo apt update
+sudo apt install build-essential libzmq3-dev libczmq-dev libsodium-dev pkg-config -y
+```
 
 ## Build & Run
 
